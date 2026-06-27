@@ -1,0 +1,111 @@
+# ===========================================================================
+# Basketball-Modelling configuration  (NBA + NBL)
+# ===========================================================================
+# Single source of truth for the pipeline. Loaded once by util.load_config and
+# threaded through every stage. One repo, two leagues — each league has its own
+# block (data source, game length, pace/scoring baselines); the model code is
+# shared and reads the active league's block.
+
+leagues: [nba, nbl]               # build order: NBA first, then NBL
+
+# --------------------------------------------------------------------------- #
+# NBA — sourced from the ESPN hidden API (no auth, cloud-reachable => runs on
+# GitHub Actions). stats.nba.com/cdn.nba.com are Akamai-walled for cloud IPs.
+# ESPN "season" = the year the season ENDS (2026 = the 2025-26 season).
+# --------------------------------------------------------------------------- #
+nba:
+  source: "espn"
+  espn_site: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba"
+  espn_core: "https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba"
+  season: 2026
+  history_seasons: [2024, 2025, 2026]
+  season_type: 2                  # ESPN: 2 = regular season
+  quarters: 4
+  quarter_minutes: 12             # 48-minute game
+  # Sim baselines (league averages; per-team profiles deviate from these)
+  league_pace: 99.0               # possessions per team per 48
+  league_ortg: 114.0              # points per 100 possessions
+  league_ppg: 113.0
+  home_edge_pts: 2.6              # home-court advantage in points
+  sigma_margin: 11.6              # SD of game margin (Normal)
+  sigma_total: 16.5               # SD of game total (Normal)
+  ot_push: 0.045                  # P(overtime) baseline near a pick'em
+  prop_minutes_default: 28.0      # fallback projected minutes for a rotation player
+
+# --------------------------------------------------------------------------- #
+# NBL — Australian league, sourced from the nbl.com.au "rosetta" proxy
+# (referer-gated only, so cloud-reachable). "year" = season START year
+# (2025 = NBL26). 40-minute game, lower pace/scoring than the NBA.
+# --------------------------------------------------------------------------- #
+nbl:
+  source: "rosetta"
+  rosetta_base: "https://prod.rosetta.nbl.com.au/get"
+  season: 2025                    # NBL26 (year = season start)
+  history_seasons: [2023, 2024, 2025]
+  season_type: "regular"
+  quarters: 4
+  quarter_minutes: 10             # 40-minute game
+  league_pace: 97.0
+  league_ortg: 110.0
+  league_ppg: 86.0
+  home_edge_pts: 3.0
+  sigma_margin: 12.4
+  sigma_total: 17.0
+  ot_push: 0.05
+  prop_minutes_default: 24.0
+
+# --------------------------------------------------------------------------- #
+# Team / player profiles (shared) — shrink small samples toward the league mean
+# --------------------------------------------------------------------------- #
+features:
+  team_prior_games: 12            # prior GP of league-average rating
+  player_prior_games: 15          # prior GP for a player's rate
+  min_player_games: 5             # below this a player is treated as fringe
+  min_player_minutes: 12.0        # min projected minutes to publish props
+
+# --------------------------------------------------------------------------- #
+# Team Elo (results-based baseline, per league)
+# --------------------------------------------------------------------------- #
+elo:
+  initial: 1500.0
+  k: 11.0                         # tuned so the league Elo spread stays ~400 (with the MOV multiplier)
+  home_field: 60.0                # Elo points for home court (~2.6 pts)
+  mov_mult: true                  # scale K by margin of victory
+  season_regression: 0.25         # regress toward mean between seasons
+  pts_per_elo: 0.0435             # margin points per Elo point (for blending)
+
+# --------------------------------------------------------------------------- #
+# Simulation / market book (shared knobs; league baselines come from the block)
+# --------------------------------------------------------------------------- #
+sim:
+  elo_weight: 0.45                # blend weight of Elo win-prob into the headline
+  spread_ladder: 8               # spread alt lines out to ±(mean rounded ± this)
+  totals_steps: 5                 # total O/U alt lines either side of the projection
+  totals_step_size: 2.0          # spacing of the total ladder (points)
+  team_total_steps: 4
+  prop_steps: 2                   # over/under alt lines around each prop projection
+  quarter_var_inflation: 1.15     # extra relative SD for single-quarter markets
+  half_var_inflation: 1.07
+
+# --------------------------------------------------------------------------- #
+# Upcoming fixtures
+# --------------------------------------------------------------------------- #
+fixtures:
+  days_ahead: 4                   # schedule window to price
+  manual_file: "data/manual_fixtures.csv"
+
+# --------------------------------------------------------------------------- #
+# Output paths
+# --------------------------------------------------------------------------- #
+paths:
+  models_dir: "models"
+  reports_dir: "reports"
+  docs_dir: "docs"
+  docs_data_dir: "docs/data"
+
+# --------------------------------------------------------------------------- #
+# Backtest (walk-forward; score the most recent season as holdout)
+# --------------------------------------------------------------------------- #
+backtest:
+  nba_holdout_season: 2026
+  nbl_holdout_season: 2025

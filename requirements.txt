@@ -1,0 +1,4 @@
+# The model + site generator are Python standard-library only.
+# curl_cffi is used only by the optional bookmaker-odds fetcher (odds.py); the
+# core pipeline (ingest/features/ratings/sim/predict/build_site) needs nothing here.
+curl_cffi>=0.7.0
