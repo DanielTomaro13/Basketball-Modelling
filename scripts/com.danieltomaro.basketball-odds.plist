@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.danieltomaro.basketball-odds</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/danieltomaro/Documents/Projects/Basketball/scripts/odds-cron.sh</string>
+    </array>
+
+    <!-- Every 3 hours (10800s). Missed runs (laptop asleep) fire once on wake. -->
+    <key>StartInterval</key>
+    <integer>10800</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/danieltomaro/Documents/Projects/Basketball/scripts/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/danieltomaro/Documents/Projects/Basketball/scripts/launchd.err.log</string>
+</dict>
+</plist>
