@@ -13,8 +13,8 @@ from __future__ import annotations
 import sys
 import time
 
-from . import (build_site, evaluate, features, fixtures, ingest, odds, players,
-               predict, ratings, scrape_schedule, util)
+from . import (build_site, evaluate, features, fixtures, futures, ingest, odds,
+               players, predict, ratings, scrape_schedule, supercoach, util)
 
 
 def run(quick: bool = False) -> int:
@@ -51,14 +51,24 @@ def run(quick: bool = False) -> int:
     util.log("=== 6/8 predict ===")
     predict.main([])
 
-    util.log("=== 7/8 players + site ===")
+    util.log("=== 7/9 players + futures + supercoach ===")
     try:
         players.build(cfg)
     except Exception as exc:  # noqa: BLE001
         util.log(f"run_daily: players skipped ({exc})")
+    try:
+        futures.build(cfg)
+    except Exception as exc:  # noqa: BLE001
+        util.log(f"run_daily: futures skipped ({exc})")
+    try:
+        supercoach.build(cfg)
+    except Exception as exc:  # noqa: BLE001
+        util.log(f"run_daily: supercoach skipped ({exc})")
+
+    util.log("=== 8/9 build site ===")
     build_site.build(cfg)
 
-    util.log("=== 8/8 odds (best-effort; AU-geo books) ===")
+    util.log("=== 9/9 odds (best-effort; AU-geo books) ===")
     try:
         odds.run(cfg)
     except Exception as exc:  # noqa: BLE001

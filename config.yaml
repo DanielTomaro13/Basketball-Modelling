@@ -31,6 +31,9 @@ nba:
   sigma_total: 16.5               # SD of game total (Normal)
   ot_push: 0.045                  # P(overtime) baseline near a pick'em
   prop_minutes_default: 28.0      # fallback projected minutes for a rotation player
+  supercoach_year: 2025           # SuperCoach season key (NBA/NBL run across the new year)
+  games_per_season: 82            # regular-season games (futures win totals)
+  playoff_teams: 16               # teams in the post-season bracket (futures title odds)
 
 # --------------------------------------------------------------------------- #
 # NBL — Australian league, sourced from the nbl.com.au "rosetta" proxy
@@ -53,6 +56,9 @@ nbl:
   sigma_total: 17.0
   ot_push: 0.05
   prop_minutes_default: 24.0
+  supercoach_year: 2025
+  games_per_season: 28
+  playoff_teams: 6
 
 # --------------------------------------------------------------------------- #
 # Team / player profiles (shared) — shrink small samples toward the league mean

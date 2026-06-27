@@ -25,7 +25,9 @@ let LEAGUE = localStorage.getItem("bb_league") || "nba";
 /* ---------- chrome ---------- */
 const NAV = [
   ["home", "Home", "index.html"], ["games", "Games", "games.html"],
-  ["value", "Value", "value.html"], ["rankings", "Rankings", "rankings.html"],
+  ["compare", "Compare", "compare.html"], ["value", "Value", "value.html"],
+  ["pickem", "Pick'em", "pickem.html"], ["fantasy", "Fantasy", "fantasy.html"],
+  ["futures", "Futures", "futures.html"], ["rankings", "Rankings", "rankings.html"],
   ["players", "Players", "players.html"], ["backtest", "Backtest", "backtest.html"],
   ["about", "About", "about.html"],
 ];
@@ -314,8 +316,114 @@ async function pageAbout(content) {
   content.append(el("div", { class: "cards" }, ...steps.map(([h, p]) => el("div", { class: "tile" }, el("h3", {}, h), el("p", {}, p)))));
 }
 
+/* ---------- compare (5-book odds) ---------- */
+function bookCols(data) { return (data?.books || []); }
+async function pageCompare(content) {
+  const data = await getJSON("data/odds.json");
+  function render() {
+    content.replaceChildren(leagueBar(render));
+    const games = (data?.games || []).filter((g) => g.league === LEAGUE);
+    if (!games.length)
+      return content.append(el("p", { class: "loading" }, "No bookmaker odds loaded yet — markets open closer to game time, and prices refresh from a local run. Every game still shows the model's fair price on the Games page."));
+    const books = bookCols(data);
+    content.append(el("p", { class: "mut" }, `Books: ${books.join(", ")} · model fair price vs the market · updated ${data.generated}`));
+    const rows = games.flatMap((g) => g.markets.flatMap((m) => m.selections.map((s) => ({ ...s, g, market: m.label }))));
+    const head = el("tr", {}, el("th", { class: "pl" }, "Game"), el("th", { class: "pl" }, "Selection"),
+      el("th", {}, "Model"), el("th", {}, "Fair"), ...books.map((b) => el("th", {}, BOOK_LABEL(b))), el("th", {}, "Best"), el("th", {}, "EV"));
+    content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+      el("thead", {}, head),
+      el("tbody", {}, ...rows.map((s) => el("tr", {},
+        el("td", { class: "pl mut" }, `${s.g.awayAbbr} @ ${s.g.homeAbbr}`),
+        el("td", { class: "pl" }, s.label, el("span", { class: "mut" }, ` · ${s.market}`)),
+        el("td", {}, fmtPct(s.model)), el("td", {}, odds(s.fair)),
+        ...books.map((b) => el("td", { class: s.best?.book === b ? "bestbook" : "" }, odds(s.books?.[b]))),
+        el("td", { class: "bestbook" }, odds(s.best?.price)),
+        el("td", { class: s.ev > 0 ? "pos" : "neg" }, (s.ev > 0 ? "+" : "") + (s.ev * 100).toFixed(1) + "%"))))))));
+  }
+  render();
+}
+function BOOK_LABEL(b) { return ({ sportsbet: "Sportsbet", ladbrokes: "Ladbrokes", pointsbet: "PointsBet", tab: "TAB", dabble: "Dabble" })[b] || b; }
+
+/* ---------- pick'em (Dabble) ---------- */
+async function pagePickem(content) {
+  const data = await getJSON("data/pickem-lines.json");
+  function render() {
+    content.replaceChildren(leagueBar(render));
+    const lines = (data?.lines || []).filter((l) => l.league === LEAGUE);
+    content.append(el("p", { class: "mut" }, "Dabble Pick'em — the model's lean on each player line (more/less), with its projection and edge."));
+    if (!lines.length)
+      return content.append(el("p", { class: "loading" }, "No Pick'em lines loaded yet — Dabble posts them closer to tip-off."));
+    content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, el("th", { class: "pl" }, "Player"), el("th", { class: "pl" }, "Stat"),
+        el("th", {}, "Line"), el("th", {}, "Proj"), el("th", {}, "Over %"), el("th", {}, "Lean"))),
+      el("tbody", {}, ...lines.map((l) => el("tr", {},
+        el("td", { class: "pl" }, el("b", {}, l.player)), el("td", { class: "pl mut" }, l.stat),
+        el("td", {}, l.line), el("td", {}, l.proj),
+        el("td", {}, fmtPct(l.over)),
+        el("td", { class: l.over >= 0.5 ? "pos" : "neg" }, l.over >= 0.5 ? "MORE" : "LESS"))))))));
+  }
+  render();
+}
+
+/* ---------- fantasy (SuperCoach) ---------- */
+async function pageFantasy(content) {
+  const cache = {};
+  async function load() { return (cache[LEAGUE] ||= await getJSON(`data/fantasy-${LEAGUE}.json`)); }
+  async function render() {
+    content.replaceChildren(leagueBar(() => render()));
+    const data = await load();
+    if (!data?.players?.length) return content.append(el("p", { class: "loading" }, "SuperCoach data not available for " + LEAGUE.toUpperCase() + "."));
+    const input = el("input", { class: "search", type: "search", placeholder: "Search players…", autocomplete: "off" });
+    const sort = el("select", {}, ...[["avg", "Average"], ["value", "Value (pts/$M)"], ["price", "Price"], ["owned", "Ownership"]].map(([v, t]) => el("option", { value: v }, t)));
+    const count = el("span", { class: "count" });
+    content.append(el("p", { class: "mut" }, `SuperCoach ${LEAGUE.toUpperCase()} · ${data.count} players · proj is the season average · updated ${data.generated}`));
+    content.append(el("div", { class: "filters" }, input, sort, count));
+    const host = el("div", { class: "match" }); content.append(host);
+    function draw() {
+      const q = input.value.trim().toLowerCase(), key = sort.value;
+      const rows = data.players.filter((p) => p.name.toLowerCase().includes(q))
+        .sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 160);
+      count.textContent = rows.length + " shown";
+      host.replaceChildren(el("div", { class: "tablewrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", { class: "pl" }, "Player"), el("th", {}, "Team"), el("th", {}, "Pos"),
+          el("th", {}, "Price"), el("th", {}, "Proj"), el("th", {}, "GP"), el("th", {}, "Value"), el("th", {}, "Owned"))),
+        el("tbody", {}, ...rows.map((p) => el("tr", {},
+          el("td", { class: "pl" }, el("b", {}, p.name)), el("td", { class: "mut" }, el("span", { class: "pill" }, p.team)),
+          el("td", { class: "mut" }, (p.pos || []).join("/")),
+          el("td", {}, "$" + (p.price / 1000).toFixed(0) + "k"), el("td", { class: "elo" }, p.proj),
+          el("td", { class: "mut" }, p.gp || "—"), el("td", {}, p.value ?? "—"),
+          el("td", { class: "mut" }, (p.owned ?? 0) + "%")))))));
+    }
+    input.oninput = draw; sort.onchange = draw; draw();
+  }
+  render();
+}
+
+/* ---------- futures ---------- */
+async function pageFutures(content) {
+  const data = await getJSON("data/futures.json");
+  function render() {
+    content.replaceChildren(leagueBar(render));
+    const lg = data?.leagues?.[LEAGUE];
+    if (!lg?.teams?.length) return content.append(el("p", { class: "loading" }, "Futures not available."));
+    content.append(el("p", { class: "mut" }, `Model title & playoff odds and projected records from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff). Off-season projection.`));
+    content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Team"), el("th", {}, "Elo"),
+        el("th", {}, "Proj W-L"), el("th", {}, "Playoffs"), el("th", {}, "Title"), el("th", {}, "Title $"))),
+      el("tbody", {}, ...lg.teams.map((t) => el("tr", {},
+        el("td", { class: "mut" }, t.rank),
+        el("td", { class: "pl" }, el("b", {}, t.name), " ", el("span", { class: "pill" }, t.abbr)),
+        el("td", { class: "mut" }, t.elo),
+        el("td", {}, `${t.proj_wins}-${t.proj_losses}`),
+        el("td", {}, fmtPct(t.playoff_pct)),
+        el("td", { class: "elo" }, fmtPct(t.title_pct)),
+        el("td", { class: "mut" }, odds(t.title_fair)))))))));
+  }
+  render();
+}
+
 /* ---------- boot ---------- */
-const PAGES = { home: pageHome, games: pageGames, value: pageValue, rankings: pageRankings, players: pagePlayers, backtest: pageBacktest, about: pageAbout };
+const PAGES = { home: pageHome, games: pageGames, compare: pageCompare, value: pageValue, pickem: pagePickem, fantasy: pageFantasy, futures: pageFutures, rankings: pageRankings, players: pagePlayers, backtest: pageBacktest, about: pageAbout };
 (async function () {
   const page = document.body.dataset.page || "home";
   chrome(page);
