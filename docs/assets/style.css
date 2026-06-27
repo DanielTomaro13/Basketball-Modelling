@@ -83,6 +83,13 @@ tr:last-child td{border-bottom:0}
 .neg{color:var(--neg)}
 .bestbook{font-weight:700}
 .elo{font-weight:800;color:var(--acc2)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+th.so{cursor:pointer;user-select:none;white-space:nowrap}
+th.so:hover{color:var(--ink)}
+th.so.on{color:var(--acc2)}
+.rankbadge{display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:10.5px;font-weight:800;
+  background:rgba(232,116,59,.16);color:var(--acc2);border:1px solid rgba(232,116,59,.3);vertical-align:middle}
+tbody tr:hover{background:rgba(255,255,255,.02)}
 
 /* filters */
 .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:8px 0;

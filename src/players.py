@@ -18,12 +18,13 @@ def build(cfg: dict) -> tuple[dict, list[dict]]:
         cards[league] = {}
         for pid, p in lp["players"].items():
             pg = p["pg"]
+            r1 = lambda k: round(pg[k], 1)
             cards[league][pid] = {
                 "id": pid, "name": p["name"], "team": p.get("teamAbbr", ""),
-                "gp": p["gp"], "min": p["min"],
-                "pts": pg["pts"], "reb": pg["reb"], "ast": pg["ast"], "fg3m": pg["fg3m"],
-                "stl": pg["stl"], "blk": pg["blk"], "tov": pg["tov"],
-                "fgm": pg["fgm"], "ftm": pg["ftm"],
+                "gp": p["gp"], "min": round(p["min"], 1),
+                "pts": r1("pts"), "reb": r1("reb"), "ast": r1("ast"), "fg3m": r1("fg3m"),
+                "stl": r1("stl"), "blk": r1("blk"), "tov": r1("tov"),
+                "fgm": r1("fgm"), "ftm": r1("ftm"),
                 "dd_rate": p.get("dd_rate", 0), "td_rate": p.get("td_rate", 0),
             }
             index.append({"id": pid, "name": p["name"], "team": p.get("teamAbbr", ""), "league": league})

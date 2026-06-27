@@ -19,6 +19,32 @@ function el(tag, attrs = {}, ...kids) {
   return e;
 }
 function bar(p) { const b = el("div", { class: "bar" }); const s = el("span"); s.style.width = ((p || 0) * 100).toFixed(1) + "%"; b.append(s); return b; }
+const money = (v) => (v == null ? "—" : "$" + (v / 1000).toFixed(0) + "k");
+const signed = (v) => (v == null ? "—" : (v > 0 ? "+" : "") + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + "k" : v));
+function deltaCell(v) { return el("td", { class: "num " + (v > 0 ? "pos" : v < 0 ? "neg" : "mut") }, signed(v)); }
+function badge(txt, cls) { return txt ? el("span", { class: "pill " + (cls || "") }, txt) : ""; }
+
+// Sortable table: cols = [{key,label,cls,get,cell}]; renders, clicking a header re-sorts.
+function sortableTable(rows, cols, state, host) {
+  function draw() {
+    const sorted = state.sort ? [...rows].sort((a, b) => {
+      const ga = state._get(a), gb = state._get(b);
+      if (ga == null) return 1; if (gb == null) return -1;
+      return typeof ga === "string" ? state.dir * ga.localeCompare(gb) : state.dir * (gb - ga);
+    }) : rows;
+    const head = el("tr", {}, ...cols.map((c) => {
+      const on = state.sort === c.key;
+      const th = el("th", { class: (c.cls || "") + " so" + (on ? " on" : "") }, c.label + (on ? (state.dir > 0 ? " ▾" : " ▴") : ""));
+      th.onclick = () => { if (state.sort === c.key) state.dir = -state.dir; else { state.sort = c.key; state.dir = 1; } state._get = c.get; draw(); };
+      return th;
+    }));
+    host.replaceChildren(el("div", { class: "tablewrap" }, el("table", {}, el("thead", {}, head),
+      el("tbody", {}, ...sorted.slice(0, state.limit || 200).map((r) => el("tr", {}, ...cols.map((c) => c.cell(r))))))));
+  }
+  state._get = state._get || ((r) => 0);
+  draw();
+  return draw;
+}
 
 let LEAGUE = localStorage.getItem("bb_league") || "nba";
 
@@ -266,22 +292,25 @@ async function pagePlayers(content) {
     if (!index) return content.append(el("p", { class: "loading" }, "Players not available."));
     const input = el("input", { class: "search", type: "search", placeholder: "Search players…", autocomplete: "off" });
     const count = el("span", { class: "count" });
+    content.append(el("p", { class: "mut", style: "margin:2px 0 8px;font-size:12.5px" }, "Season per-game profiles behind the prop projections. Tap any column to sort."));
     content.append(el("div", { class: "filters" }, input, count));
     const host = el("div", { class: "match" }); content.append(host);
+    const num = (k, lab) => ({ key: k, label: lab, get: (r) => r[k], cell: (r) => el("td", { class: "num" }, r[k] ?? "—") });
+    const cols = [
+      { key: "name", label: "Player", cls: "pl", get: (r) => r.name, cell: (r) => el("td", { class: "pl" }, el("b", {}, r.name)) },
+      { key: "team", label: "Team", get: (r) => r.team, cell: (r) => el("td", {}, badge(r.team)) },
+      { key: "gp", label: "GP", cls: "mut", get: (r) => r.gp, cell: (r) => el("td", { class: "num mut" }, r.gp) },
+      { key: "min", label: "Min", cls: "mut", get: (r) => r.min, cell: (r) => el("td", { class: "num mut" }, r.min) },
+      { key: "pts", label: "Pts", get: (r) => r.pts, cell: (r) => el("td", { class: "num elo" }, r.pts) },
+      num("reb", "Reb"), num("ast", "Ast"), num("fg3m", "3PM"), num("stl", "Stl"), num("blk", "Blk"),
+      num("tov", "TO"), num("fgm", "FGM"), num("ftm", "FTM"),
+    ];
     function draw() {
       const q = input.value.trim().toLowerCase();
       const rows = index.filter((p) => p.league === LEAGUE && p.name.toLowerCase().includes(q))
-        .map((p) => players?.[LEAGUE]?.[p.id]).filter(Boolean)
-        .sort((a, b) => b.pts - a.pts).slice(0, 140);
-      count.textContent = rows.length + " shown";
-      host.replaceChildren(el("div", { class: "tablewrap" }, el("table", {},
-        el("thead", {}, el("tr", {}, el("th", { class: "pl" }, "Player"), el("th", {}, "Team"), el("th", {}, "GP"), el("th", {}, "Min"),
-          el("th", {}, "Pts"), el("th", {}, "Reb"), el("th", {}, "Ast"), el("th", {}, "3PM"), el("th", {}, "Stl"), el("th", {}, "Blk"))),
-        el("tbody", {}, ...rows.map((p) => el("tr", {},
-          el("td", { class: "pl" }, el("b", {}, p.name)), el("td", { class: "mut" }, el("span", { class: "pill" }, p.team)),
-          el("td", { class: "mut" }, p.gp), el("td", { class: "mut" }, p.min),
-          el("td", {}, p.pts), el("td", {}, p.reb), el("td", {}, p.ast), el("td", {}, p.fg3m),
-          el("td", {}, p.stl), el("td", {}, p.blk)))))));
+        .map((p) => players?.[LEAGUE]?.[p.id]).filter(Boolean);
+      count.textContent = Math.min(rows.length, 160) + " of " + rows.length;
+      sortableTable(rows, cols, { sort: "pts", dir: 1, limit: 160, _get: (r) => r.pts }, host);
     }
     input.oninput = draw; draw();
   }
@@ -366,58 +395,119 @@ async function pagePickem(content) {
 }
 
 /* ---------- fantasy (SuperCoach) ---------- */
+const FANTASY_VIEWS = [
+  ["premiums", "Premiums", "proj", "Top scorers — your captain and must-have picks."],
+  ["value", "Value", "value", "Best points per $1M — the cash-efficient picks."],
+  ["movers", "Price movers", "price_change", "Biggest price risers and fallers this round."],
+  ["captains", "Captains", "captain", "Highest projected captain scores (score counts double)."],
+  ["owned", "Ownership", "owned", "Most-owned players — the template."],
+  ["all", "All players", "proj", "The full pool — sort any column."],
+];
+function valueClass(v) { return v == null ? "mut" : v >= 9 ? "pos" : v >= 5 ? "" : "neg"; }
 async function pageFantasy(content) {
   const cache = {};
   async function load() { return (cache[LEAGUE] ||= await getJSON(`data/fantasy-${LEAGUE}.json`)); }
+  let view = "premiums", pos = "all";
   async function render() {
     content.replaceChildren(leagueBar(() => render()));
     const data = await load();
     if (!data?.players?.length) return content.append(el("p", { class: "loading" }, "SuperCoach data not available for " + LEAGUE.toUpperCase() + "."));
+    const positions = ["all", ...[...new Set(data.players.flatMap((p) => p.pos || []))].sort()];
+    content.append(el("p", { class: "mut" }, `SuperCoach ${LEAGUE.toUpperCase()} · ${data.count} players · round ${data.round} · proj = season average · updated ${data.generated}`));
+    const viewbar = el("div", { class: "subtabs" }, ...FANTASY_VIEWS.map(([id, label]) =>
+      el("button", { class: id === view ? "on" : "", onclick: () => { view = id; render(); } }, label)));
     const input = el("input", { class: "search", type: "search", placeholder: "Search players…", autocomplete: "off" });
-    const sort = el("select", {}, ...[["avg", "Average"], ["value", "Value (pts/$M)"], ["price", "Price"], ["owned", "Ownership"]].map(([v, t]) => el("option", { value: v }, t)));
+    const posSel = el("select", {}, ...positions.map((p) => el("option", { value: p, selected: p === pos ? "" : null }, p === "all" ? "All positions" : p)));
     const count = el("span", { class: "count" });
-    content.append(el("p", { class: "mut" }, `SuperCoach ${LEAGUE.toUpperCase()} · ${data.count} players · proj is the season average · updated ${data.generated}`));
-    content.append(el("div", { class: "filters" }, input, sort, count));
+    const desc = el("p", { class: "mut", style: "margin:2px 0 8px;font-size:12.5px" }, FANTASY_VIEWS.find((v) => v[0] === view)[3]);
+    content.append(viewbar, desc, el("div", { class: "filters" }, input, posSel, count));
     const host = el("div", { class: "match" }); content.append(host);
+
+    const cols = [
+      { key: "name", label: "Player", cls: "pl", get: (r) => r.name, cell: (r) => { const n = parseInt((r.pos_rank || "").replace(/\D/g, ""), 10); return el("td", { class: "pl" }, el("b", {}, r.name), (r.pos_rank && n <= 30) ? el("span", { class: "rankbadge", title: "Rank at position" }, r.pos_rank) : ""); } },
+      { key: "team", label: "Team", cls: "", get: (r) => r.team, cell: (r) => el("td", {}, badge(r.team)) },
+      { key: "pos", label: "Pos", cls: "mut", get: (r) => (r.pos || []).join("/"), cell: (r) => el("td", { class: "mut" }, (r.pos || []).join("/")) },
+      { key: "price", label: "Price", get: (r) => r.price, cell: (r) => el("td", { class: "num" }, money(r.price)) },
+      { key: "price_change", label: "Δ", get: (r) => r.price_change, cell: (r) => deltaCell(r.price_change) },
+      { key: "proj", label: "Proj", get: (r) => r.proj, cell: (r) => el("td", { class: "num elo" }, r.proj) },
+      { key: "captain", label: "Capt", get: (r) => r.captain, cell: (r) => el("td", { class: "num mut" }, r.captain) },
+      { key: "value", label: "Value", get: (r) => r.value, cell: (r) => el("td", { class: "num " + valueClass(r.value) }, r.value ?? "—") },
+      { key: "ppm", label: "Pts/min", cls: "mut", get: (r) => r.ppm, cell: (r) => el("td", { class: "num mut" }, r.ppm || "—") },
+      { key: "owned", label: "Own", cls: "mut", get: (r) => r.owned, cell: (r) => el("td", { class: "num mut" }, (r.owned ?? 0) + "%") },
+      { key: "opp", label: "Next", cls: "mut", get: (r) => r.opp, cell: (r) => el("td", { class: "num mut" }, r.opp || "—") },
+    ];
     function draw() {
-      const q = input.value.trim().toLowerCase(), key = sort.value;
-      const rows = data.players.filter((p) => p.name.toLowerCase().includes(q))
-        .sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 160);
-      count.textContent = rows.length + " shown";
-      host.replaceChildren(el("div", { class: "tablewrap" }, el("table", {},
-        el("thead", {}, el("tr", {}, el("th", { class: "pl" }, "Player"), el("th", {}, "Team"), el("th", {}, "Pos"),
-          el("th", {}, "Price"), el("th", {}, "Proj"), el("th", {}, "GP"), el("th", {}, "Value"), el("th", {}, "Owned"))),
-        el("tbody", {}, ...rows.map((p) => el("tr", {},
-          el("td", { class: "pl" }, el("b", {}, p.name)), el("td", { class: "mut" }, el("span", { class: "pill" }, p.team)),
-          el("td", { class: "mut" }, (p.pos || []).join("/")),
-          el("td", {}, "$" + (p.price / 1000).toFixed(0) + "k"), el("td", { class: "elo" }, p.proj),
-          el("td", { class: "mut" }, p.gp || "—"), el("td", {}, p.value ?? "—"),
-          el("td", { class: "mut" }, (p.owned ?? 0) + "%")))))));
+      const q = input.value.trim().toLowerCase();
+      let rows = data.players.filter((p) => p.name.toLowerCase().includes(q) && (pos === "all" || (p.pos || []).includes(pos)));
+      if (view === "value") rows = rows.filter((p) => p.price >= (LEAGUE === "nbl" ? 150000 : 5_000_000));
+      if (view === "movers") rows = [...rows].sort((a, b) => Math.abs(b.price_change) - Math.abs(a.price_change));
+      const sortKey = FANTASY_VIEWS.find((v) => v[0] === view)[2];
+      const state = { sort: view === "movers" ? null : sortKey, dir: 1, limit: 180, _get: (r) => r[sortKey] };
+      if (view === "movers") { count.textContent = Math.min(rows.length, 180) + " shown"; host.replaceChildren(el("div", { class: "tablewrap" }, el("table", {}, el("thead", {}, el("tr", {}, ...cols.map((c) => el("th", { class: c.cls || "" }, c.label)))), el("tbody", {}, ...rows.slice(0, 180).map((r) => el("tr", {}, ...cols.map((c) => c.cell(r)))))))); return; }
+      const sorted = [...rows];
+      count.textContent = Math.min(sorted.length, 180) + " of " + rows.length;
+      sortableTable(sorted, cols, state, host);
     }
-    input.oninput = draw; sort.onchange = draw; draw();
+    input.oninput = draw; posSel.onchange = () => { pos = posSel.value; draw(); }; draw();
   }
   render();
 }
 
-/* ---------- futures ---------- */
+/* ---------- futures (championship + stat leaders) ---------- */
 async function pageFutures(content) {
-  const data = await getJSON("data/futures.json");
+  const [data, leaders] = await Promise.all([getJSON("data/futures.json"), getJSON("data/leaders.json")]);
+  let view = "title", cat = "pts";
   function render() {
     content.replaceChildren(leagueBar(render));
     const lg = data?.leagues?.[LEAGUE];
+    const ld = leaders?.leagues?.[LEAGUE];
+    content.append(el("div", { class: "subtabs" },
+      el("button", { class: view === "title" ? "on" : "", onclick: () => { view = "title"; render(); } }, "Championship"),
+      el("button", { class: view === "wins" ? "on" : "", onclick: () => { view = "wins"; render(); } }, "Win totals"),
+      el("button", { class: view === "leaders" ? "on" : "", onclick: () => { view = "leaders"; render(); } }, "Stat leaders")));
+
+    if (view === "leaders") {
+      if (!ld?.cats) return content.append(el("p", { class: "loading" }, "Leaders not available."));
+      content.append(el("p", { class: "mut" }, `Model-projected season leaders — each player's per-game rate over a full ${ld.games}-game season.`));
+      const catbar = el("div", { class: "subtabs" }, ...Object.entries(ld.cats).map(([k, c]) =>
+        el("button", { class: k === cat ? "on" : "", onclick: () => { cat = k; render(); } }, c.label)));
+      content.append(catbar);
+      const c = ld.cats[cat] || ld.cats.pts;
+      content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Player"), el("th", {}, "Team"), el("th", {}, "Per game"), el("th", {}, "Proj season"))),
+        el("tbody", {}, ...c.rows.map((r, i) => el("tr", {},
+          el("td", { class: "mut" }, i + 1),
+          el("td", { class: "pl" }, el("b", {}, r.name)), el("td", {}, badge(r.team)),
+          el("td", { class: "num elo" }, r.per_game), el("td", { class: "num mut" }, r.proj_total.toLocaleString()))))))));
+      return;
+    }
+
     if (!lg?.teams?.length) return content.append(el("p", { class: "loading" }, "Futures not available."));
-    content.append(el("p", { class: "mut" }, `Model title & playoff odds and projected records from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff). Off-season projection.`));
+    if (view === "wins") {
+      content.append(el("p", { class: "mut" }, `Projected regular-season records over a ${lg.games}-game season, sorted by wins.`));
+      const wins = [...lg.teams].sort((a, b) => b.proj_wins - a.proj_wins);
+      content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+        el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Team"), el("th", {}, "Proj W-L"), el("th", {}, "Win %"), el("th", {}, "Playoffs"))),
+        el("tbody", {}, ...wins.map((t, i) => el("tr", {},
+          el("td", { class: "mut" }, i + 1),
+          el("td", { class: "pl" }, el("b", {}, t.name), " ", badge(t.abbr)),
+          el("td", { class: "num elo" }, `${t.proj_wins}-${t.proj_losses}`),
+          el("td", { class: "num mut" }, fmtPct(t.win_pct)),
+          el("td", { class: "num" }, fmtPct(t.playoff_pct)))))))));
+      return;
+    }
+    content.append(el("p", { class: "mut" }, `Model title & playoff odds from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff).`));
     content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Team"), el("th", {}, "Elo"),
         el("th", {}, "Proj W-L"), el("th", {}, "Playoffs"), el("th", {}, "Title"), el("th", {}, "Title $"))),
       el("tbody", {}, ...lg.teams.map((t) => el("tr", {},
         el("td", { class: "mut" }, t.rank),
-        el("td", { class: "pl" }, el("b", {}, t.name), " ", el("span", { class: "pill" }, t.abbr)),
-        el("td", { class: "mut" }, t.elo),
-        el("td", {}, `${t.proj_wins}-${t.proj_losses}`),
-        el("td", {}, fmtPct(t.playoff_pct)),
-        el("td", { class: "elo" }, fmtPct(t.title_pct)),
-        el("td", { class: "mut" }, odds(t.title_fair)))))))));
+        el("td", { class: "pl" }, el("b", {}, t.name), " ", badge(t.abbr)),
+        el("td", { class: "num mut" }, t.elo),
+        el("td", { class: "num" }, `${t.proj_wins}-${t.proj_losses}`),
+        el("td", { class: "num" }, fmtPct(t.playoff_pct)),
+        el("td", { class: "num elo" }, fmtPct(t.title_pct)),
+        el("td", { class: "num mut" }, odds(t.title_fair)))))))));
   }
   render();
 }
