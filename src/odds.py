@@ -618,35 +618,52 @@ def _pb_championship(league: str) -> list[tuple]:
     return out
 
 
-def _lad_championship(league: str) -> list[tuple]:
-    if not LAD_CATS:                          # set LAD_BASKETBALL_CATS env to enable
-        return []
-    q = urllib.parse.quote(json.dumps(LAD_CATS))
-    d = _cget(f"{LAD}/v2/sport/event-request?category_ids={q}", LAD_HDR)
-    out = []
-    for eid, e in ((d or {}).get("events", {}) or {}).items():
-        if _league_of(e.get("competition_name", "")) != league and _league_of(e.get("name", "")) != league:
-            continue
-        card = _cget(f"{LAD}/v2/sport/event-card?id={eid}", LAD_HDR)
-        if not card:
-            continue
-        prices = card.get("prices", {})
+# Ladbrokes/Entain hides futures behind GraphQL — the REST event-card prices them by
+# id, but they aren't in the REST event list. Configure the season's outright event id
+# per league (env-overridable); the default is NBA Championship 2026/27.
+_LAD_FUTURES = {
+    "nba": os.environ.get("LAD_NBA_FUTURES_EVENT", "606d2346-7fc6-4ec8-9ed7-251e6b1ae945"),
+    "nbl": os.environ.get("LAD_NBL_FUTURES_EVENT", ""),
+}
 
-        def price(ent_id):
-            for kk, v in prices.items():
-                if kk.startswith(ent_id + ":"):
-                    o = (v or {}).get("odds") or {}
-                    return round(float(o["decimal"]), 2) if "decimal" in o else None
+
+def _lad_price(odds_obj) -> float | None:
+    o = (odds_obj or {}).get("odds") or {}
+    if "decimal" in o:
+        try:
+            return round(float(o["decimal"]), 2)
+        except (TypeError, ValueError):
             return None
-        by_m = {}
-        for ent in card.get("entrants", {}).values():
-            by_m.setdefault(ent.get("market_id"), []).append(ent)
-        for mid, ents in by_m.items():
-            if _is_title_market((card.get("markets", {}).get(mid) or {}).get("name", "")):
-                for ent in ents:
-                    p = price(ent["id"])
-                    if p and p > 1:
-                        out.append((ent.get("name", ""), p))
+    try:
+        return round(1 + float(o["numerator"]) / float(o["denominator"]), 2)   # fractional
+    except (TypeError, ValueError, KeyError, ZeroDivisionError):
+        return None
+
+
+def _lad_championship(league: str) -> list[tuple]:
+    eid = _LAD_FUTURES.get(league)
+    if not eid:
+        return []
+    card = _cget(f"{LAD}/v2/sport/event-card?id={eid}", LAD_HDR)
+    if not card:
+        return []
+    prices = card.get("prices", {})
+
+    def price(ent_id):
+        for kk, v in prices.items():
+            if kk.startswith(ent_id + ":"):
+                return _lad_price(v)
+        return None
+    by_m = {}
+    for ent in card.get("entrants", {}).values():
+        by_m.setdefault(ent.get("market_id"), []).append(ent)
+    out = []
+    for mid, ents in by_m.items():
+        if _is_title_market((card.get("markets", {}).get(mid) or {}).get("name", "")):
+            for ent in ents:
+                p = price(ent["id"])
+                if p and p > 1:
+                    out.append((ent.get("name", ""), p))
     return out
 
 
