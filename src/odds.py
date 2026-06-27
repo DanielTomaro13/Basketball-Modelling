@@ -175,10 +175,16 @@ _COMP_NAMES = {"nba": ("nba",), "nbl": ("nbl",)}
 
 def _league_of(comp_name):
     low = (comp_name or "").lower()
-    if "nbl" in low:
-        return "nbl"
+    if "wnba" in low:                                  # not the NBA
+        return "wnba"
     if "nba" in low:
         return "nba"
+    if "nbl1" in low or "nbl 1" in low:                # semi-pro NBL1, not the NBL
+        return None
+    if "new zealand" in low or "nz nbl" in low:        # NZ NBL, a different league
+        return None
+    if "nbl" in low:
+        return "nbl"
     return None
 
 
