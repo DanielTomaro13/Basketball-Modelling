@@ -214,8 +214,8 @@ def sb_markets(ev):
 LAD = "https://api.ladbrokes.com.au"
 LAD_HDR = {"User-Agent": "Mozilla/5.0", "Origin": "https://www.ladbrokes.com.au",
            "Referer": "https://www.ladbrokes.com.au/", "Content-Type": "application/json"}
-# Ladbrokes/Entain basketball category UUIDs (env-overridable; resolved when live).
-LAD_CATS = [c for c in os.environ.get("LAD_BASKETBALL_CATS", "").split(",") if c]
+# Ladbrokes/Entain basketball category UUID (env-overridable).
+LAD_CATS = [c for c in os.environ.get("LAD_BASKETBALL_CATS", "3c34d075-dc14-436d-bfc4-9272a49c2b39").split(",") if c]
 
 
 def lad_events():
@@ -359,8 +359,8 @@ def _dab_get(path):
         return None
 
 
-# Dabble basketball sport id (env-overridable; resolved when live).
-DAB_BASKETBALL_SPORT = os.environ.get("DAB_BASKETBALL_SPORT", "")
+# Dabble basketball sport id (env-overridable).
+DAB_BASKETBALL_SPORT = os.environ.get("DAB_BASKETBALL_SPORT", "01408294-cb34-4cc0-8ab1-504f5c4c6e1f")
 
 
 def _dab_comps():
@@ -566,33 +566,139 @@ def run(cfg: dict) -> dict:
 # Futures (outright) odds — open year-round, so the value page works off-season.
 # Sportsbet now (direct apigw, AU-geo); structured for more books later.
 # --------------------------------------------------------------------------- #
+def _is_title_market(name: str) -> bool:
+    n = (name or "").lower()
+    return ("winner" in n or "outright" in n or "champion" in n or "to win" in n) \
+        and not any(k in n for k in ("conference", "division", "east", "west", "mvp", "scoring",
+                                     "rookie", "player", "coach", "defensive", "regular season"))
+
+
 _SB_FUTURES_CLASS = {"nba": 16, "nbl": 63}   # Basketball - US / Basketball - Aus-Other
 
 
 def _sb_championship(league: str) -> list[tuple]:
-    """Return [(team_name, win_price)] for the league's championship/finals winner."""
     cls = _SB_FUTURES_CLASS.get(league)
     if not cls:
         return []
     comps = _get(f"{SB}/{cls}/Competitions") or []
-    want = "nba futures" if league == "nba" else "nbl futures"
-    comp = next((c for c in comps if want in str(c.get("name", "")).lower()), None) or \
-        next((c for c in comps if "future" in str(c.get("name", "")).lower()
-              and _league_of(c.get("name")) == league), None)
+    comp = next((c for c in comps if "future" in str(c.get("name", "")).lower()
+                 and _league_of(c.get("name")) == league), None)
     if not comp:
         return []
     d = _get(f"{SB}/Competitions/{comp['id']}?displayType=default&eventFilter=outrights") or {}
     out = []
     for ev in d.get("events", []) if isinstance(d, dict) else []:
-        mkts = _get(f"{SB}/Events/{ev['id']}/Markets") or []
-        for m in mkts if isinstance(mkts, list) else []:
-            nm = (m.get("name") or "").lower()
-            if "winner" in nm and ("finals" in nm or "championship" in nm or "title" in nm):
+        for m in (_get(f"{SB}/Events/{ev['id']}/Markets") or []):
+            if _is_title_market(m.get("name")):
                 for s in m.get("selections", []):
                     price = util.num((s.get("price") or {}).get("winPrice"))
                     if price > 1:
                         out.append((s.get("name", ""), round(price, 2)))
     return out
+
+
+def _pb_championship(league: str) -> list[tuple]:
+    d = _cget(f"{PB_V2}/sports/list/", PB_HDR)
+    if not d:
+        return []
+    sports = d.get("sports", d) if isinstance(d, dict) else d
+    keys = [c.get("key") for s in sports if str(s.get("name", "")).strip().lower() == "basketball"
+            for c in s.get("competitions", [])
+            if "future" in str(c.get("name", "")).lower() and _league_of(c.get("name")) == league]
+    out = []
+    for key in keys:
+        feat = _cget(f"{PB}/events/featured/competition/{key}", PB_HDR)
+        for ev in (feat.get("events", []) if isinstance(feat, dict) else feat) or []:
+            for m in (ev.get("fixedOddsMarkets") or ev.get("markets") or []):
+                if _is_title_market(m.get("name")):
+                    for o in (m.get("outcomes") or []):
+                        price = util.num(o.get("price"))
+                        if price > 1:
+                            out.append((o.get("name", ""), round(price, 2)))
+    return out
+
+
+def _lad_championship(league: str) -> list[tuple]:
+    if not LAD_CATS:                          # set LAD_BASKETBALL_CATS env to enable
+        return []
+    q = urllib.parse.quote(json.dumps(LAD_CATS))
+    d = _cget(f"{LAD}/v2/sport/event-request?category_ids={q}", LAD_HDR)
+    out = []
+    for eid, e in ((d or {}).get("events", {}) or {}).items():
+        if _league_of(e.get("competition_name", "")) != league and _league_of(e.get("name", "")) != league:
+            continue
+        card = _cget(f"{LAD}/v2/sport/event-card?id={eid}", LAD_HDR)
+        if not card:
+            continue
+        prices = card.get("prices", {})
+
+        def price(ent_id):
+            for kk, v in prices.items():
+                if kk.startswith(ent_id + ":"):
+                    o = (v or {}).get("odds") or {}
+                    return round(float(o["decimal"]), 2) if "decimal" in o else None
+            return None
+        by_m = {}
+        for ent in card.get("entrants", {}).values():
+            by_m.setdefault(ent.get("market_id"), []).append(ent)
+        for mid, ents in by_m.items():
+            if _is_title_market((card.get("markets", {}).get(mid) or {}).get("name", "")):
+                for ent in ents:
+                    p = price(ent["id"])
+                    if p and p > 1:
+                        out.append((ent.get("name", ""), p))
+    return out
+
+
+def _tab_championship(league: str) -> list[tuple]:
+    tok = _tab_token()
+    if not tok:
+        return []
+    hdr = {"Authorization": f"Bearer {tok}", "Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+    lst = _cget(f"{TAB}/sports/Basketball/competitions?jurisdiction=NSW&homeState=NSW", hdr)
+    out = []
+    for comp in (lst or {}).get("competitions", []):
+        # the futures comp (e.g. "NBA Futures") holds matches, each carrying the outright markets
+        if "future" not in str(comp.get("name", "")).lower() or _league_of(comp.get("name")) != league:
+            continue
+        matches_link = (comp.get("_links") or {}).get("matches")
+        ml = _cget(matches_link, hdr) if matches_link else None
+        for mt in (ml or {}).get("matches", []) if isinstance(ml, dict) else []:
+            self_link = (mt.get("_links") or {}).get("self")
+            d = _cget(self_link, hdr) if self_link else None
+            for m in (d or {}).get("markets", []) if isinstance(d, dict) else []:
+                if _is_title_market(m.get("betOption") or m.get("name")):
+                    for pp in m.get("propositions", []):
+                        p = util.num(pp.get("returnWin"))
+                        if p > 1:
+                            out.append((pp.get("name", ""), round(p, 2)))
+    return out
+
+
+def _dab_championship(league: str) -> list[tuple]:
+    out = []
+    for comp in _dab_comps():
+        if _league_of(comp.get("name")) != league or "future" not in (comp.get("name") or "").lower():
+            continue
+        for f in _dab_fixtures(comp["id"]):
+            detail = _dab_get(f"/frontend-api/sport-fixtures/details/{f['id']}")
+            sfd = (detail or {}).get("sportFixtureDetail") or (detail or {}).get("data", {}).get("sportFixtureDetail") or {}
+            sel_name = {s["id"]: s.get("name", "") for s in sfd.get("selections", [])}
+            by_m = {}
+            for p in sfd.get("prices", []):
+                by_m.setdefault(p.get("marketId"), []).append((sel_name.get(p.get("selectionId")), p.get("price")))
+            for m in sfd.get("markets", []):
+                if _is_title_market(m.get("name")):
+                    for nm, price in by_m.get(m.get("id"), []):
+                        if util.num(price) > 1:
+                            out.append((nm, round(util.num(price), 2)))
+    return out
+
+
+FUTURES_BOOKS = {
+    "sportsbet": _sb_championship, "pointsbet": _pb_championship,
+    "ladbrokes": _lad_championship, "tab": _tab_championship, "dabble": _dab_championship,
+}
 
 
 def futures_odds(cfg: dict) -> dict:
@@ -607,16 +713,15 @@ def futures_odds(cfg: dict) -> dict:
         teams = (fut.get("leagues", {}).get(league, {}) or {}).get("teams", [])
         if not teams:
             continue
-        by_team = {t["teamId"]: t for t in teams}
         tmeta = profiles.get(league, {}).get("teams", {})
-        sb = _safe(_sb_championship, league) or []
-        # map each book selection to a model team via name
+        # each book's championship board -> map selections to model teams by name
         priced = {}
-        for name, price in sb:
-            tid = next((tid for tid, tm in tmeta.items() if _team_match(name, tm)), None)
-            if tid:
-                priced.setdefault(tid, {})["sportsbet"] = price
-                books_present.add("sportsbet")
+        for book, fn in FUTURES_BOOKS.items():
+            for name, price in (_safe(fn, league) or []):
+                tid = next((tid for tid, tm in tmeta.items() if _team_match(name, tm)), None)
+                if tid:
+                    priced.setdefault(tid, {})[book] = price
+                    books_present.add(book)
         rows = []
         for t in teams:
             books = priced.get(t["teamId"], {})
