@@ -562,6 +562,80 @@ def run(cfg: dict) -> dict:
     return {"games": len(out_games), "books": sorted(books_present), "pickem": len(_PICKEM)}
 
 
+# --------------------------------------------------------------------------- #
+# Futures (outright) odds — open year-round, so the value page works off-season.
+# Sportsbet now (direct apigw, AU-geo); structured for more books later.
+# --------------------------------------------------------------------------- #
+_SB_FUTURES_CLASS = {"nba": 16, "nbl": 63}   # Basketball - US / Basketball - Aus-Other
+
+
+def _sb_championship(league: str) -> list[tuple]:
+    """Return [(team_name, win_price)] for the league's championship/finals winner."""
+    cls = _SB_FUTURES_CLASS.get(league)
+    if not cls:
+        return []
+    comps = _get(f"{SB}/{cls}/Competitions") or []
+    want = "nba futures" if league == "nba" else "nbl futures"
+    comp = next((c for c in comps if want in str(c.get("name", "")).lower()), None) or \
+        next((c for c in comps if "future" in str(c.get("name", "")).lower()
+              and _league_of(c.get("name")) == league), None)
+    if not comp:
+        return []
+    d = _get(f"{SB}/Competitions/{comp['id']}?displayType=default&eventFilter=outrights") or {}
+    out = []
+    for ev in d.get("events", []) if isinstance(d, dict) else []:
+        mkts = _get(f"{SB}/Events/{ev['id']}/Markets") or []
+        for m in mkts if isinstance(mkts, list) else []:
+            nm = (m.get("name") or "").lower()
+            if "winner" in nm and ("finals" in nm or "championship" in nm or "title" in nm):
+                for s in m.get("selections", []):
+                    price = util.num((s.get("price") or {}).get("winPrice"))
+                    if price > 1:
+                        out.append((s.get("name", ""), round(price, 2)))
+    return out
+
+
+def futures_odds(cfg: dict) -> dict:
+    md = cfg["paths"]["models_dir"]
+    dd = cfg["paths"]["docs_data_dir"]
+    fut = util.read_json(util.abspath(os.path.join(dd, "futures.json"))) \
+        if os.path.exists(util.abspath(os.path.join(dd, "futures.json"))) else {}
+    profiles = util.read_json(util.abspath(os.path.join(md, "profiles.json"))) \
+        if os.path.exists(util.abspath(os.path.join(md, "profiles.json"))) else {}
+    books_present, out = set(), {}
+    for league in cfg["leagues"]:
+        teams = (fut.get("leagues", {}).get(league, {}) or {}).get("teams", [])
+        if not teams:
+            continue
+        by_team = {t["teamId"]: t for t in teams}
+        tmeta = profiles.get(league, {}).get("teams", {})
+        sb = _safe(_sb_championship, league) or []
+        # map each book selection to a model team via name
+        priced = {}
+        for name, price in sb:
+            tid = next((tid for tid, tm in tmeta.items() if _team_match(name, tm)), None)
+            if tid:
+                priced.setdefault(tid, {})["sportsbet"] = price
+                books_present.add("sportsbet")
+        rows = []
+        for t in teams:
+            books = priced.get(t["teamId"], {})
+            mp = t.get("title_pct") or 0
+            row = {"team": t["name"], "abbr": t["abbr"], "model_pct": mp,
+                   "model_fair": t.get("title_fair"), "books": books}
+            if books and mp > 0:
+                best_price = max(books.values()); best_book = max(books, key=books.get)
+                row.update({"best": {"price": best_price, "book": best_book},
+                            "ev": round(mp * best_price - 1, 4), "edge": round(mp - 1 / best_price, 4)})
+            rows.append(row)
+        out[league] = {"championship": rows}
+    util.write_json(util.abspath(os.path.join(dd, "futures-odds.json")),
+                    {"generated": _now(), "books": sorted(books_present), "leagues": out})
+    n = sum(1 for lg in out.values() for r in lg["championship"] if r.get("books"))
+    util.log(f"odds: futures — {n} championship selections priced across {sorted(books_present) or 'no books'}")
+    return {"priced": n, "books": sorted(books_present)}
+
+
 def _match_event(events, f):
     for e in events:
         if e.get("league") and e["league"] != f["league"]:

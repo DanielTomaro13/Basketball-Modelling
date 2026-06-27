@@ -77,6 +77,10 @@ def run(quick: bool = False) -> int:
         odds.run(cfg)
     except Exception as exc:  # noqa: BLE001
         util.log(f"run_daily: odds skipped ({exc})")
+    try:
+        odds.futures_odds(cfg)   # outright/championship futures (open year-round)
+    except Exception as exc:  # noqa: BLE001
+        util.log(f"run_daily: futures odds skipped ({exc})")
 
     util.log(f"run_daily: done in {time.time() - t0:.1f}s")
     return 0

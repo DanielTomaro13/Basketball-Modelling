@@ -249,16 +249,26 @@ function valueTable(rows) {
       el("td", { class: s.ev > 0 ? "pos" : "neg" }, (s.ev > 0 ? "+" : "") + (s.ev * 100).toFixed(1) + "%")))))));
 }
 async function pageValue(content) {
-  const data = await getJSON("data/odds.json");
+  const [data, fodds] = await Promise.all([getJSON("data/odds.json"), getJSON("data/futures-odds.json")]);
   function render() {
     content.replaceChildren(leagueBar(render));
     const picks = valuePicks(data, LEAGUE);
-    if (!data || !data.games?.length)
-      return content.append(el("p", { class: "loading" }, "No bookmaker odds loaded yet — they open closer to game time. Every game still shows the model's fair price on the Games page."));
-    content.append(el("p", { class: "mut" }, `Books: ${(data.books || []).join(", ") || "—"} · updated ${data.generated}`));
-    content.append(el("div", { class: "group-head" }, el("h2", {}, "Positive expected value"), el("span", { class: "muted" }, picks.length + " selections")));
-    if (picks.length) content.append(valueTable(picks));
-    else content.append(el("p", { class: "loading" }, "No positive-EV selections for " + LEAGUE.toUpperCase() + " right now."));
+    const fo = fodds?.leagues?.[LEAGUE]?.championship;
+    const fval = (fo || []).filter((r) => (r.edge ?? -1) > 0);
+    if (data?.games?.length) {
+      content.append(el("p", { class: "mut" }, `Books: ${(data.books || []).join(", ") || "—"} · updated ${data.generated}`));
+      content.append(el("div", { class: "group-head" }, el("h2", {}, "Positive expected value"), el("span", { class: "muted" }, picks.length + " selections")));
+      content.append(picks.length ? valueTable(picks) : el("p", { class: "loading" }, "No positive-EV selections right now."));
+    } else {
+      content.append(el("p", { class: "mut" }, "Game markets open closer to tip-off. Until then, here's where the model sees value in the championship futures."));
+    }
+    if (fval.length) {
+      content.append(el("div", { class: "group-head" }, el("h2", {}, "Championship futures value"), el("span", { class: "muted" }, fval.length + " teams · " + (fodds.books || []).map(BOOK_LABEL).join(", "))));
+      content.append(el("div", { class: "disclaim" }, "Edge = the model's win probability minus the best book's implied probability. Big futures edges usually mean the model rates a team well above the market — disagreement, not a sure thing."));
+      content.append(futuresCompare(fo, fodds.books, { valueOnly: true }));
+    } else if (!data?.games?.length) {
+      content.append(el("p", { class: "loading" }, "No bookmaker odds loaded yet for " + LEAGUE.toUpperCase() + "."));
+    }
   }
   render();
 }
@@ -348,12 +358,20 @@ async function pageAbout(content) {
 /* ---------- compare (5-book odds) ---------- */
 function bookCols(data) { return (data?.books || []); }
 async function pageCompare(content) {
-  const data = await getJSON("data/odds.json");
+  const [data, fodds] = await Promise.all([getJSON("data/odds.json"), getJSON("data/futures-odds.json")]);
   function render() {
     content.replaceChildren(leagueBar(render));
     const games = (data?.games || []).filter((g) => g.league === LEAGUE);
-    if (!games.length)
+    const fo = fodds?.leagues?.[LEAGUE]?.championship;
+    const hasFut = fo && fo.some((r) => r.books && Object.keys(r.books).length);
+    if (!games.length) {
+      if (hasFut) {
+        content.append(el("p", { class: "mut" }, `Game markets open closer to tip-off. Championship futures — model fair price vs ${(fodds.books || []).map(BOOK_LABEL).join(", ")}. Updated ${fodds.generated}.`));
+        content.append(futuresCompare(fo, fodds.books));
+        return;
+      }
       return content.append(el("p", { class: "loading" }, "No bookmaker odds loaded yet — markets open closer to game time, and prices refresh from a local run. Every game still shows the model's fair price on the Games page."));
+    }
     const books = bookCols(data);
     content.append(el("p", { class: "mut" }, `Books: ${books.join(", ")} · model fair price vs the market · updated ${data.generated}`));
     const rows = games.flatMap((g) => g.markets.flatMap((m) => m.selections.map((s) => ({ ...s, g, market: m.label }))));
@@ -453,9 +471,27 @@ async function pageFantasy(content) {
   render();
 }
 
+/* ---------- futures comparison table (model fair vs books) ---------- */
+function futuresCompare(rows, books, opts) {
+  opts = opts || {};
+  const priced = rows.filter((r) => r.books && Object.keys(r.books).length);
+  if (opts.valueOnly) rows = priced.filter((r) => (r.edge ?? -1) > 0).sort((a, b) => b.edge - a.edge);
+  const head = el("tr", {}, el("th", { class: "pl" }, "Team"), el("th", {}, "Model %"), el("th", {}, "Model fair"),
+    ...books.map((b) => el("th", {}, BOOK_LABEL(b))), el("th", {}, "Best"), el("th", {}, "Edge"));
+  return el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
+    el("thead", {}, head),
+    el("tbody", {}, ...rows.map((r) => el("tr", {},
+      el("td", { class: "pl" }, el("b", {}, r.team), " ", badge(r.abbr)),
+      el("td", { class: "num elo" }, fmtPct(r.model_pct)),
+      el("td", { class: "num mut" }, odds(r.model_fair)),
+      ...books.map((b) => el("td", { class: "num " + (r.best?.book === b ? "bestbook" : "mut") }, odds(r.books?.[b]))),
+      el("td", { class: "num bestbook" }, odds(r.best?.price)),
+      el("td", { class: "num " + (r.edge > 0 ? "pos" : r.edge < 0 ? "neg" : "mut") }, r.edge == null ? "—" : (r.edge > 0 ? "+" : "") + (r.edge * 100).toFixed(1) + "%")))))));
+}
+
 /* ---------- futures (championship + stat leaders) ---------- */
 async function pageFutures(content) {
-  const [data, leaders] = await Promise.all([getJSON("data/futures.json"), getJSON("data/leaders.json")]);
+  const [data, leaders, fodds] = await Promise.all([getJSON("data/futures.json"), getJSON("data/leaders.json"), getJSON("data/futures-odds.json")]);
   let view = "title", cat = "pts";
   function render() {
     content.replaceChildren(leagueBar(render));
@@ -494,6 +530,13 @@ async function pageFutures(content) {
           el("td", { class: "num elo" }, `${t.proj_wins}-${t.proj_losses}`),
           el("td", { class: "num mut" }, fmtPct(t.win_pct)),
           el("td", { class: "num" }, fmtPct(t.playoff_pct)))))))));
+      return;
+    }
+    const fo = fodds?.leagues?.[LEAGUE]?.championship;
+    const fbooks = fodds?.books || [];
+    if (fo && fo.some((r) => r.books && Object.keys(r.books).length)) {
+      content.append(el("p", { class: "mut" }, `Model championship odds vs the bookmakers (${fbooks.map(BOOK_LABEL).join(", ")}). Edge = model probability − best-price implied. Updated ${fodds.generated}.`));
+      content.append(futuresCompare(fo, fbooks));
       return;
     }
     content.append(el("p", { class: "mut" }, `Model title & playoff odds from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff).`));
