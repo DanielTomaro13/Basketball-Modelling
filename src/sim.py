@@ -364,11 +364,11 @@ def project_game(home: dict, away: dict, agg: dict, sim_cfg: dict,
 # Player props
 # --------------------------------------------------------------------------- #
 # game-to-game SD ≈ factor * sqrt(mean); low-count stats use Poisson tails.
-_PROP_SD = {"pts": 1.7, "reb": 1.05, "ast": 1.1, "fgm": 1.15, "ftm": 1.25, "tov": 1.0}
+_PROP_SD = {"pts": 1.7, "reb": 1.05, "ast": 1.1, "fgm": 1.15, "fg2m": 1.1, "ftm": 1.25, "tov": 1.0}
 _POISSON_STATS = {"fg3m", "stl", "blk"}
 _PROP_LABEL = {"pts": "Points", "reb": "Rebounds", "ast": "Assists", "fg3m": "Threes made",
-               "fgm": "Field goals made", "ftm": "Free throws made", "stl": "Steals",
-               "blk": "Blocks", "tov": "Turnovers"}
+               "fg2m": "Two-pointers made", "fgm": "Field goals made", "ftm": "Free throws made",
+               "stl": "Steals", "blk": "Blocks", "tov": "Turnovers"}
 _COMBOS = {"pra": (("pts", "reb", "ast"), "Pts+Reb+Ast"), "pr": (("pts", "reb"), "Pts+Reb"),
            "pa": (("pts", "ast"), "Pts+Ast"), "ra": (("reb", "ast"), "Reb+Ast"),
            "stocks": (("stl", "blk"), "Steals+Blocks")}
@@ -409,9 +409,10 @@ def player_props(player: dict, scale: float, agg: dict, sim_cfg: dict,
     mscale = (mins / base_min) if base_min else 1.0
     steps = sim_cfg["prop_steps"]
     means = {k: max(0.0, pg.get(k, 0.0) * scale * mscale) for k in _PROP_LABEL}
+    means["fg2m"] = max(0.0, means["fgm"] - means["fg3m"])   # two-pointers = FG made − threes
 
     singles = []
-    for stat in ("pts", "reb", "ast", "fg3m", "stl", "blk", "fgm", "ftm", "tov"):
+    for stat in ("pts", "reb", "ast", "fg3m", "fg2m", "stl", "blk", "fgm", "ftm", "tov"):
         m = means[stat]
         if m < 0.4:
             continue
