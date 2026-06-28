@@ -362,12 +362,12 @@ async function pageCompare(content) {
   function render() {
     content.replaceChildren(leagueBar(render));
     const games = (data?.games || []).filter((g) => g.league === LEAGUE);
-    const fo = fodds?.leagues?.[LEAGUE]?.championship;
-    const hasFut = fo && fo.some((r) => r.books && Object.keys(r.books).length);
+    const fmarkets = (fodds?.leagues?.[LEAGUE]?.markets || []).filter((m) => m.rows.some((r) => r.books && Object.keys(r.books).length));
     if (!games.length) {
-      if (hasFut) {
-        content.append(el("p", { class: "mut" }, `Game markets open closer to tip-off. Championship futures — model fair price vs ${(fodds.books || []).map(BOOK_LABEL).join(", ")}. Updated ${fodds.generated}.`));
-        content.append(futuresCompare(fo, fodds.books));
+      if (fmarkets.length) {
+        content.append(el("p", { class: "mut" }, `Game markets open closer to tip-off. Futures — model fair price vs ${(fodds.books || []).map(BOOK_LABEL).join(", ")} across every market. Updated ${fodds.generated}.`));
+        const host = el("div", {}); content.append(host);
+        marketBoard(fmarkets, fodds.books, host);
         return;
       }
       return content.append(el("p", { class: "loading" }, "No bookmaker odds loaded yet — markets open closer to game time, and prices refresh from a local run. Every game still shows the model's fair price on the Games page."));
@@ -489,25 +489,60 @@ function futuresCompare(rows, books, opts) {
       el("td", { class: "num " + (r.edge > 0 ? "pos" : r.edge < 0 ? "neg" : "mut") }, r.edge == null ? "—" : (r.edge > 0 ? "+" : "") + (r.edge * 100).toFixed(1) + "%")))))));
 }
 
-/* ---------- futures (championship + stat leaders) ---------- */
+// Generic futures market comparison (championship / conferences / divisions / win totals / MVP).
+function marketTable(m, books) {
+  const model = !!m.model;
+  const head = el("tr", {}, el("th", { class: "pl" }, m.type === "player" ? "Player" : "Team"),
+    ...(model ? [el("th", {}, "Model %"), el("th", {}, "Fair")] : []),
+    ...books.map((b) => el("th", {}, BOOK_LABEL(b))), el("th", {}, "Best"),
+    ...(model ? [el("th", {}, "Edge")] : []));
+  const rows = m.rows.map((r) => el("tr", {},
+    el("td", { class: "pl" }, el("b", {}, r.name), r.abbr ? " " : "", r.abbr ? badge(r.abbr) : ""),
+    ...(model ? [el("td", { class: "num elo" }, r.model_pct != null ? fmtPct(r.model_pct) : "—"), el("td", { class: "num mut" }, odds(r.model_fair))] : []),
+    ...books.map((b) => el("td", { class: "num " + (r.best?.book === b ? "bestbook" : "mut") }, odds(r.books?.[b]))),
+    el("td", { class: "num bestbook" }, odds(r.best?.price)),
+    ...(model ? [el("td", { class: "num " + (r.edge > 0 ? "pos" : r.edge < 0 ? "neg" : "mut") }, r.edge == null ? "—" : (r.edge > 0 ? "+" : "") + (r.edge * 100).toFixed(1) + "%")] : [])));
+  return el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {}, el("thead", {}, head), el("tbody", {}, ...rows))));
+}
+// market dropdown + table; markets = futures-odds markets array
+function marketBoard(markets, books, host) {
+  let key = markets[0]?.key;
+  const sel = el("select", {}, ...markets.map((m) => el("option", { value: m.key }, m.label + (m.model ? "  ·  model" : ""))));
+  const tbl = el("div", {});
+  function draw() { const m = markets.find((x) => x.key === sel.value) || markets[0]; tbl.replaceChildren(marketTable(m, books)); }
+  sel.onchange = draw; sel.value = key;
+  host.replaceChildren(el("div", { class: "filters" }, el("label", {}, "Market ", sel), el("span", { class: "count" }, markets.length + " markets")), tbl);
+  draw();
+}
+
+/* ---------- futures (odds board + model projections + stat leaders) ---------- */
 async function pageFutures(content) {
   const [data, leaders, fodds] = await Promise.all([getJSON("data/futures.json"), getJSON("data/leaders.json"), getJSON("data/futures-odds.json")]);
-  let view = "title", cat = "pts";
+  let view = "odds", cat = "pts";
   function render() {
     content.replaceChildren(leagueBar(render));
     const lg = data?.leagues?.[LEAGUE];
     const ld = leaders?.leagues?.[LEAGUE];
+    const fmarkets = (fodds?.leagues?.[LEAGUE]?.markets || []).filter((m) => m.rows.some((r) => r.books && Object.keys(r.books).length));
     content.append(el("div", { class: "subtabs" },
-      el("button", { class: view === "title" ? "on" : "", onclick: () => { view = "title"; render(); } }, "Championship"),
-      el("button", { class: view === "wins" ? "on" : "", onclick: () => { view = "wins"; render(); } }, "Win totals"),
+      el("button", { class: view === "odds" ? "on" : "", onclick: () => { view = "odds"; render(); } }, "Odds board"),
+      el("button", { class: view === "proj" ? "on" : "", onclick: () => { view = "proj"; render(); } }, "Model projections"),
       el("button", { class: view === "leaders" ? "on" : "", onclick: () => { view = "leaders"; render(); } }, "Stat leaders")));
+
+    if (view === "odds") {
+      if (!fmarkets.length)
+        return content.append(el("p", { class: "loading" }, `No bookmaker futures markets for ${LEAGUE.toUpperCase()} yet — they open closer to the season. The model's view is on "Model projections".`));
+      content.append(el("p", { class: "mut" }, `Model fair price vs the bookmakers (${(fodds.books || []).map(BOOK_LABEL).join(", ")}) across every futures market. Model edge shown where available. Updated ${fodds.generated}.`));
+      const host = el("div", {}); content.append(host);
+      marketBoard(fmarkets, fodds.books, host);
+      return;
+    }
 
     if (view === "leaders") {
       if (!ld?.cats) return content.append(el("p", { class: "loading" }, "Leaders not available."));
       content.append(el("p", { class: "mut" }, `Model-projected season leaders — each player's per-game rate over a full ${ld.games}-game season.`));
-      const catbar = el("div", { class: "subtabs" }, ...Object.entries(ld.cats).map(([k, c]) =>
-        el("button", { class: k === cat ? "on" : "", onclick: () => { cat = k; render(); } }, c.label)));
-      content.append(catbar);
+      content.append(el("div", { class: "subtabs" }, ...Object.entries(ld.cats).map(([k, c]) =>
+        el("button", { class: k === cat ? "on" : "", onclick: () => { cat = k; render(); } }, c.label))));
       const c = ld.cats[cat] || ld.cats.pts;
       content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
         el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Player"), el("th", {}, "Team"), el("th", {}, "Per game"), el("th", {}, "Proj season"))),
@@ -518,28 +553,9 @@ async function pageFutures(content) {
       return;
     }
 
-    if (!lg?.teams?.length) return content.append(el("p", { class: "loading" }, "Futures not available."));
-    if (view === "wins") {
-      content.append(el("p", { class: "mut" }, `Projected regular-season records over a ${lg.games}-game season, sorted by wins.`));
-      const wins = [...lg.teams].sort((a, b) => b.proj_wins - a.proj_wins);
-      content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
-        el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Team"), el("th", {}, "Proj W-L"), el("th", {}, "Win %"), el("th", {}, "Playoffs"))),
-        el("tbody", {}, ...wins.map((t, i) => el("tr", {},
-          el("td", { class: "mut" }, i + 1),
-          el("td", { class: "pl" }, el("b", {}, t.name), " ", badge(t.abbr)),
-          el("td", { class: "num elo" }, `${t.proj_wins}-${t.proj_losses}`),
-          el("td", { class: "num mut" }, fmtPct(t.win_pct)),
-          el("td", { class: "num" }, fmtPct(t.playoff_pct)))))))));
-      return;
-    }
-    const fo = fodds?.leagues?.[LEAGUE]?.championship;
-    const fbooks = fodds?.books || [];
-    if (fo && fo.some((r) => r.books && Object.keys(r.books).length)) {
-      content.append(el("p", { class: "mut" }, `Model championship odds vs the bookmakers (${fbooks.map(BOOK_LABEL).join(", ")}). Edge = model probability − best-price implied. Updated ${fodds.generated}.`));
-      content.append(futuresCompare(fo, fbooks));
-      return;
-    }
-    content.append(el("p", { class: "mut" }, `Model title & playoff odds from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff).`));
+    // model projections (Monte Carlo)
+    if (!lg?.teams?.length) return content.append(el("p", { class: "loading" }, "Projections not available."));
+    content.append(el("p", { class: "mut" }, `Model title, playoff and win projections from a ${lg.sims.toLocaleString()}-season Monte Carlo (${lg.games}-game season, top-${lg.playoff_teams} playoff).`));
     content.append(el("div", { class: "match" }, el("div", { class: "tablewrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", {}, "#"), el("th", { class: "pl" }, "Team"), el("th", {}, "Elo"),
         el("th", {}, "Proj W-L"), el("th", {}, "Playoffs"), el("th", {}, "Title"), el("th", {}, "Title $"))),

@@ -572,17 +572,36 @@ def run(cfg: dict) -> dict:
 # Futures (outright) odds — open year-round, so the value page works off-season.
 # Sportsbet now (direct apigw, AU-geo); structured for more books later.
 # --------------------------------------------------------------------------- #
-def _is_title_market(name: str) -> bool:
+_DIVS = ("atlantic", "central", "southeast", "southwest", "pacific", "northwest")
+_MARKET_ORDER = ["championship", "east", "west", "mvp",
+                 "wins_40", "wins_45", "wins_50", "wins_55", "wins_60"] + [f"div_{d}" for d in _DIVS]
+
+
+def _fut_market(name: str):
+    """Canonicalise a book's futures market name -> (key, label, type)."""
     n = (name or "").lower()
-    return ("winner" in n or "outright" in n or "champion" in n or "to win" in n) \
-        and not any(k in n for k in ("conference", "division", "east", "west", "mvp", "scoring",
-                                     "rookie", "player", "coach", "defensive", "regular season"))
+    if "finals winner" in n or "championship" in n or ("outright" in n and "winner" in n):
+        return ("championship", "Championship Winner", "team")
+    if "eastern conference" in n:
+        return ("east", "Eastern Conference Winner", "team")
+    if "western conference" in n:
+        return ("west", "Western Conference Winner", "team")
+    m = re.search(r"(\d+)\+?\s*(?:regular[ -]season )?wins", n)
+    if m:
+        return (f"wins_{m.group(1)}", f"{m.group(1)}+ Regular-Season Wins", "team")
+    if "mvp" in n:
+        return ("mvp", "Regular-Season MVP", "player")
+    for d in _DIVS:
+        if d in n and "division" in n:
+            return (f"div_{d}", f"{d.title()} Division Winner", "team")
+    return (None, None, None)
 
 
 _SB_FUTURES_CLASS = {"nba": 16, "nbl": 63}   # Basketball - US / Basketball - Aus-Other
 
 
-def _sb_championship(league: str) -> list[tuple]:
+def _sb_futures(league: str) -> list[tuple]:
+    """All outright markets -> [(market_name, [(selection, price)])]."""
     cls = _SB_FUTURES_CLASS.get(league)
     if not cls:
         return []
@@ -595,15 +614,13 @@ def _sb_championship(league: str) -> list[tuple]:
     out = []
     for ev in d.get("events", []) if isinstance(d, dict) else []:
         for m in (_get(f"{SB}/Events/{ev['id']}/Markets") or []):
-            if _is_title_market(m.get("name")):
-                for s in m.get("selections", []):
-                    price = util.num((s.get("price") or {}).get("winPrice"))
-                    if price > 1:
-                        out.append((s.get("name", ""), round(price, 2)))
+            sels = [(s.get("name", ""), util.num((s.get("price") or {}).get("winPrice")))
+                    for s in m.get("selections", [])]
+            out.append((m.get("name", ""), sels))
     return out
 
 
-def _pb_championship(league: str) -> list[tuple]:
+def _pb_futures(league: str) -> list[tuple]:
     d = _cget(f"{PB_V2}/sports/list/", PB_HDR)
     if not d:
         return []
@@ -616,11 +633,8 @@ def _pb_championship(league: str) -> list[tuple]:
         feat = _cget(f"{PB}/events/featured/competition/{key}", PB_HDR)
         for ev in (feat.get("events", []) if isinstance(feat, dict) else feat) or []:
             for m in (ev.get("fixedOddsMarkets") or ev.get("markets") or []):
-                if _is_title_market(m.get("name")):
-                    for o in (m.get("outcomes") or []):
-                        price = util.num(o.get("price"))
-                        if price > 1:
-                            out.append((o.get("name", ""), round(price, 2)))
+                out.append((m.get("name", ""), [(o.get("name", ""), util.num(o.get("price")))
+                                                for o in (m.get("outcomes") or [])]))
     return out
 
 
@@ -646,7 +660,7 @@ def _lad_price(odds_obj) -> float | None:
         return None
 
 
-def _lad_championship(league: str) -> list[tuple]:
+def _lad_futures(league: str) -> list[tuple]:
     eid = _LAD_FUTURES.get(league)
     if not eid:
         return []
@@ -665,15 +679,12 @@ def _lad_championship(league: str) -> list[tuple]:
         by_m.setdefault(ent.get("market_id"), []).append(ent)
     out = []
     for mid, ents in by_m.items():
-        if _is_title_market((card.get("markets", {}).get(mid) or {}).get("name", "")):
-            for ent in ents:
-                p = price(ent["id"])
-                if p and p > 1:
-                    out.append((ent.get("name", ""), p))
+        mname = (card.get("markets", {}).get(mid) or {}).get("name", "")
+        out.append((mname, [(e.get("name", ""), price(e["id"])) for e in ents]))
     return out
 
 
-def _tab_championship(league: str) -> list[tuple]:
+def _tab_futures(league: str) -> list[tuple]:
     tok = _tab_token()
     if not tok:
         return []
@@ -681,24 +692,19 @@ def _tab_championship(league: str) -> list[tuple]:
     lst = _cget(f"{TAB}/sports/Basketball/competitions?jurisdiction=NSW&homeState=NSW", hdr)
     out = []
     for comp in (lst or {}).get("competitions", []):
-        # the futures comp (e.g. "NBA Futures") holds matches, each carrying the outright markets
         if "future" not in str(comp.get("name", "")).lower() or _league_of(comp.get("name")) != league:
             continue
-        matches_link = (comp.get("_links") or {}).get("matches")
-        ml = _cget(matches_link, hdr) if matches_link else None
+        ml = _cget((comp.get("_links") or {}).get("matches"), hdr) if (comp.get("_links") or {}).get("matches") else None
         for mt in (ml or {}).get("matches", []) if isinstance(ml, dict) else []:
             self_link = (mt.get("_links") or {}).get("self")
             d = _cget(self_link, hdr) if self_link else None
             for m in (d or {}).get("markets", []) if isinstance(d, dict) else []:
-                if _is_title_market(m.get("betOption") or m.get("name")):
-                    for pp in m.get("propositions", []):
-                        p = util.num(pp.get("returnWin"))
-                        if p > 1:
-                            out.append((pp.get("name", ""), round(p, 2)))
+                out.append((m.get("betOption") or m.get("name", ""),
+                            [(pp.get("name", ""), util.num(pp.get("returnWin"))) for pp in m.get("propositions", [])]))
     return out
 
 
-def _dab_championship(league: str) -> list[tuple]:
+def _dab_futures(league: str) -> list[tuple]:
     out = []
     for comp in _dab_comps():
         if _league_of(comp.get("name")) != league or "future" not in (comp.get("name") or "").lower():
@@ -709,18 +715,15 @@ def _dab_championship(league: str) -> list[tuple]:
             sel_name = {s["id"]: s.get("name", "") for s in sfd.get("selections", [])}
             by_m = {}
             for p in sfd.get("prices", []):
-                by_m.setdefault(p.get("marketId"), []).append((sel_name.get(p.get("selectionId")), p.get("price")))
+                by_m.setdefault(p.get("marketId"), []).append((sel_name.get(p.get("selectionId")), util.num(p.get("price"))))
             for m in sfd.get("markets", []):
-                if _is_title_market(m.get("name")):
-                    for nm, price in by_m.get(m.get("id"), []):
-                        if util.num(price) > 1:
-                            out.append((nm, round(util.num(price), 2)))
+                out.append((m.get("name", ""), by_m.get(m.get("id"), [])))
     return out
 
 
 FUTURES_BOOKS = {
-    "sportsbet": _sb_championship, "pointsbet": _pb_championship,
-    "ladbrokes": _lad_championship, "tab": _tab_championship, "dabble": _dab_championship,
+    "sportsbet": _sb_futures, "pointsbet": _pb_futures,
+    "ladbrokes": _lad_futures, "tab": _tab_futures, "dabble": _dab_futures,
 }
 
 
@@ -733,35 +736,60 @@ def futures_odds(cfg: dict) -> dict:
         if os.path.exists(util.abspath(os.path.join(md, "profiles.json"))) else {}
     books_present, out = set(), {}
     for league in cfg["leagues"]:
-        teams = (fut.get("leagues", {}).get(league, {}) or {}).get("teams", [])
+        lgfut = fut.get("leagues", {}).get(league, {}) or {}
+        teams = lgfut.get("teams", [])
         if not teams:
             continue
+        games = lgfut.get("games", cfg[league].get("games_per_season", 82))
+        by_id = {t["teamId"]: t for t in teams}
         tmeta = profiles.get(league, {}).get("teams", {})
-        # each book's championship board -> map selections to model teams by name
-        priced = {}
+
+        # gather every book's full futures board -> canon[market_key][selection] = {book: price}
+        canon: dict = {}
         for book, fn in FUTURES_BOOKS.items():
-            for name, price in (_safe(fn, league) or []):
-                tid = next((tid for tid, tm in tmeta.items() if _team_match(name, tm)), None)
-                if tid:
-                    priced.setdefault(tid, {})[book] = price
-                    books_present.add(book)
-        rows = []
-        for t in teams:
-            books = priced.get(t["teamId"], {})
-            mp = t.get("title_pct") or 0
-            row = {"team": t["name"], "abbr": t["abbr"], "model_pct": mp,
-                   "model_fair": t.get("title_fair"), "books": books}
-            if books and mp > 0:
+            for mname, sels in (_safe(fn, league) or []):
+                key, label, mtype = _fut_market(mname)
+                if not key:
+                    continue
+                mk = canon.setdefault(key, {"label": label, "type": mtype, "sel": {}})
+                for sname, price in sels:
+                    if util.num(price) > 1 and sname:
+                        mk["sel"].setdefault(sname, {})[book] = round(util.num(price), 2)
+                        books_present.add(book)
+
+        markets, champ = [], []
+        for key in [k for k in _MARKET_ORDER if k in canon] + [k for k in canon if k not in _MARKET_ORDER]:
+            mk = canon[key]
+            win_line = float(key.split("_")[1]) if key.startswith("wins_") else None
+            rows = []
+            for sname, books in mk["sel"].items():
                 best_price = max(books.values()); best_book = max(books, key=books.get)
-                row.update({"best": {"price": best_price, "book": best_book},
-                            "ev": round(mp * best_price - 1, 4), "edge": round(mp - 1 / best_price, 4)})
-            rows.append(row)
-        out[league] = {"championship": rows}
+                row = {"name": sname, "books": books, "best": {"price": best_price, "book": best_book}}
+                tid = next((i for i, tm in tmeta.items() if _team_match(sname, tm)), None) if mk["type"] == "team" else None
+                if tid:
+                    row["abbr"] = tmeta[tid].get("abbr", "")
+                    # only the championship carries a trustworthy model edge (it's the spread-robust
+                    # Monte-Carlo title prob). Win totals/conferences/divisions are book comparison
+                    # only — the team Elo spread makes a point estimate there over-confident.
+                    if key == "championship":
+                        mp = by_id.get(tid, {}).get("title_pct")
+                        if mp:
+                            row["model_pct"] = round(mp, 4); row["model_fair"] = round(1 / mp, 2)
+                            row["edge"] = round(mp - 1 / best_price, 4); row["ev"] = round(mp * best_price - 1, 4)
+                rows.append(row)
+            rows.sort(key=lambda r: (-(r.get("model_pct") or 0), r["best"]["price"]))
+            has_model = any("model_pct" in r for r in rows)
+            mrow = {"key": key, "label": mk["label"], "type": mk["type"], "model": has_model, "rows": rows}
+            markets.append(mrow)
+            # back-compat: keep top-level championship in the old shape
+            if key == "championship":
+                champ = [{**r, "team": r["name"]} for r in rows]
+        out[league] = {"games": games, "markets": markets, "championship": champ}
     util.write_json(util.abspath(os.path.join(dd, "futures-odds.json")),
                     {"generated": _now(), "books": sorted(books_present), "leagues": out})
-    n = sum(1 for lg in out.values() for r in lg["championship"] if r.get("books"))
-    util.log(f"odds: futures — {n} championship selections priced across {sorted(books_present) or 'no books'}")
-    return {"priced": n, "books": sorted(books_present)}
+    nmkt = sum(len(lg["markets"]) for lg in out.values())
+    util.log(f"odds: futures — {nmkt} markets across {sorted(books_present) or 'no books'}")
+    return {"markets": nmkt, "books": sorted(books_present)}
 
 
 def _match_event(events, f):
