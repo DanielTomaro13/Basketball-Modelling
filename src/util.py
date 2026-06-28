@@ -223,3 +223,56 @@ def num(val: Any, default: float = 0.0) -> float:
 
 def log(msg: str) -> None:
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
+
+
+def is_partial_run(cfg: dict) -> bool:
+    """True when this run was restricted to a subset of leagues (``--league``).
+
+    Whole-repo JSON writers use this to merge their fresh output over the
+    previously published file instead of clobbering the leagues they skipped.
+    """
+    allk = cfg.get("_all_leagues")
+    return bool(allk) and set(cfg.get("leagues", [])) != set(allk)
+
+
+def should_merge(cfg: dict, fresh_by_league) -> bool:
+    """True when this run did not produce fresh output for every configured league.
+
+    Covers both an explicit ``--league`` subset run and a full run where a league
+    yielded nothing (e.g. a network/geo-walled source like WNBA from a cloud CI
+    IP). In either case the whole-file writers merge over the published file so the
+    untouched leagues survive instead of being clobbered to empty.
+    """
+    if is_partial_run(cfg):
+        return True
+    configured = set(cfg.get("_all_leagues") or cfg.get("leagues", []))
+    produced = set(k for k in fresh_by_league if k in configured)
+    return produced != configured
+
+
+def merge_existing(path: str, fresh: dict, leagues: list, container_key: str | None = None) -> dict:
+    """Merge ``fresh`` (only the rebuilt leagues) over the file already at ``path``.
+
+    If ``container_key`` is given the per-league maps live under
+    ``obj[container_key]``; otherwise the object is keyed directly by league.
+    """
+    base = read_json(path) if os.path.exists(path) else {}
+    if not isinstance(base, dict):
+        base = {}
+    if container_key:
+        merged = dict(base)
+        dest = dict(base.get(container_key) or {})
+        src = fresh.get(container_key) or {}
+        for lg in leagues:
+            if lg in src:
+                dest[lg] = src[lg]
+        merged[container_key] = dest
+        for k, v in fresh.items():
+            if k != container_key:
+                merged[k] = v
+        return merged
+    merged = dict(base)
+    for lg in leagues:
+        if lg in fresh:
+            merged[lg] = fresh[lg]
+    return merged

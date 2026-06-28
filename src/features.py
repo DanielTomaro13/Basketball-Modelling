@@ -132,7 +132,14 @@ def build(cfg: dict) -> dict:
         profiles[league] = {"league": agg, "teams": teams, "players": players}
         util.log(f"features[{league}]: {len(teams)} teams, {len(players)} players "
                  f"(lg {agg['ppg']} ppg, pace {agg['pace']})")
-    util.write_json(util.abspath(os.path.join(cfg["paths"]["models_dir"], "profiles.json")), profiles)
+    path = util.abspath(os.path.join(cfg["paths"]["models_dir"], "profiles.json"))
+    # Preserve any league that wasn't rebuilt this run (a partial --league run, or a
+    # full run where a network-walled league — e.g. WNBA from a cloud CI IP — yielded
+    # no data) by merging fresh output over the previously published file.
+    fresh = [lg for lg in (cfg.get("_all_leagues") or cfg["leagues"]) if lg in profiles]
+    if util.should_merge(cfg, profiles):
+        profiles = util.merge_existing(path, profiles, fresh)
+    util.write_json(path, profiles)
     return profiles
 
 

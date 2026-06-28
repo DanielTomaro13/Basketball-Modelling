@@ -89,11 +89,15 @@ _INDEX_KEYS = ("league", "gameId", "date", "featured", "home", "away", "homeAbbr
                "fair_away", "proj_home", "proj_away", "mu_total", "mu_margin")
 
 
-def main(argv: list[str]) -> int:
-    cfg = util.load_config()
+def build(cfg: dict) -> list[dict]:
     preds = run(cfg)
     dd = cfg["paths"]["docs_data_dir"]
     reports = util.ensure_dir(util.abspath(cfg["paths"]["reports_dir"]))
+    # Leagues actually priced this run. A configured league missing here (a partial
+    # --league run, or a full run where a geo-walled league like WNBA had no data)
+    # keeps its previously published fixtures + per-game detail files.
+    built_leagues = {p["league"] for p in preds}
+    merge = util.should_merge(cfg, {lg: 1 for lg in built_leagues})
     cols = ["league", "date", "home", "away", "win_home", "win_away", "fair_home",
             "fair_away", "proj_home", "proj_away", "mu_total", "featured"]
     with open(f"{reports}/predictions.csv", "w", encoding="utf-8", newline="") as fh:
@@ -101,23 +105,48 @@ def main(argv: list[str]) -> int:
         w.writeheader()
         w.writerows(preds)
 
-    # slim index (list views) + one detail file per game (loaded on demand by the modal)
+    # slim index (list views) + one detail file per game (loaded on demand by the modal).
+    # When merging, only the rebuilt leagues' detail files are refreshed; others stay put.
     games_dir = util.ensure_dir(util.abspath(os.path.join(dd, "games")))
     for f in os.listdir(games_dir):
-        if f.endswith(".json"):
-            os.remove(os.path.join(games_dir, f))
+        if not f.endswith(".json"):
+            continue
+        if merge and not any(f.startswith(f"{lg}-") for lg in built_leagues):
+            continue
+        os.remove(os.path.join(games_dir, f))
     index = []
     for p in preds:
         index.append({k: p.get(k) for k in _INDEX_KEYS})
         util.write_json(os.path.join(games_dir, f"{p['league']}-{p['gameId']}.json"),
                         {"markets": p["markets"], "props": p["props"]})
-    util.write_json(util.abspath(os.path.join(dd, "predictions.json")),
+
+    pred_path = util.abspath(os.path.join(dd, "predictions.json"))
+    if merge and os.path.exists(pred_path):
+        prev = util.read_json(pred_path) or {}
+        kept = [fx for fx in prev.get("fixtures", []) if fx.get("league") not in built_leagues]
+        index = kept + index
+    util.write_json(pred_path,
                     {"generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
                      "count": len(index), "fixtures": index})
     util.log(f"predict: wrote {len(preds)} predictions")
     for p in preds[:8]:
         util.log(f"  [{p['league']}] {p['awayAbbr']} @ {p['homeAbbr']}  "
                  f"{p['win_home']:.0%}/{p['win_away']:.0%}  {p['proj_home']}-{p['proj_away']}")
+    return preds
+
+
+def main(argv: list[str]) -> int:
+    cfg = util.load_config()
+    leagues = []
+    for i, a in enumerate(argv):
+        if a == "--league" and i + 1 < len(argv):
+            leagues.append(argv[i + 1].lower())
+        elif a.startswith("--league="):
+            leagues.append(a.split("=", 1)[1].lower())
+    if leagues:
+        cfg["_all_leagues"] = list(cfg["leagues"])
+        cfg["leagues"] = [lg for lg in cfg["leagues"] if lg in leagues] or cfg["leagues"]
+    build(cfg)
     return 0
 
 

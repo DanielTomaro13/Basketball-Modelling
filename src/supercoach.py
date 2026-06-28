@@ -5,6 +5,10 @@ geo-blocked, so it runs in CI) for each league and writes a fantasy card per
 player: price, season average (the projection — SuperCoach posts no ``ppts1`` for
 basketball), ownership, positions and a value metric (points per $1M). Output:
 ``docs/data/fantasy-{league}.json``.
+
+SuperCoach has no WNBA competition, so any league without a SuperCoach feed (see
+``NO_FEED``) still gets an empty-but-valid ``fantasy-{league}.json`` written so
+the site shows a graceful empty state rather than a 404.
 """
 from __future__ import annotations
 
@@ -15,6 +19,9 @@ from . import util
 
 _BASE = "https://www.supercoach.com.au/{year}/api/{sport}/classic/v1/{path}"
 _HDRS = {"Accept": "application/json"}
+
+# Leagues with no SuperCoach competition — emit an empty-but-valid card file.
+NO_FEED = {"wnba"}
 
 
 def _get(year, sport: str, path: str):
@@ -64,15 +71,24 @@ def build_league(cfg: dict, league: str) -> dict:
     return {"round": rnd, "count": len(players), "opp_mid": opp_mid, "players": players}
 
 
+def _empty_card() -> dict:
+    """An empty-but-valid fantasy card (same shape as a real one) for unsupported leagues."""
+    return {"round": None, "count": 0, "opp_mid": 0, "players": []}
+
+
 def build(cfg: dict) -> dict:
     out = {}
     for league in cfg["leagues"]:
-        try:
-            res = build_league(cfg, league)
-        except Exception as exc:  # noqa: BLE001
-            util.log(f"supercoach[{league}]: failed ({exc})")
-            res = {}
-        if res:
+        if league in NO_FEED:
+            res = _empty_card()
+        else:
+            try:
+                res = build_league(cfg, league)
+            except Exception as exc:  # noqa: BLE001
+                util.log(f"supercoach[{league}]: failed ({exc})")
+                res = {}
+        if res or league in NO_FEED:
+            res = res or _empty_card()
             util.write_json(util.abspath(os.path.join(cfg["paths"]["docs_data_dir"], f"fantasy-{league}.json")),
                             {"generated": _now(), **res})
             out[league] = res.get("count", 0)

@@ -122,8 +122,12 @@ def build(cfg: dict) -> dict:
             top = res["teams"][0]
             util.log(f"futures[{league}]: title favourite {top['name']} {top['title_pct']:.1%} "
                      f"({res['games']}-game season, top-{res['playoff_teams']} playoff)")
-    util.write_json(util.abspath(os.path.join(cfg["paths"]["docs_data_dir"], "futures.json")),
-                    {"generated": _now(), "leagues": out})
+    path = util.abspath(os.path.join(cfg["paths"]["docs_data_dir"], "futures.json"))
+    payload = {"generated": _now(), "leagues": out}
+    fresh = [lg for lg in (cfg.get("_all_leagues") or cfg["leagues"]) if lg in out]
+    if util.should_merge(cfg, out):
+        payload = util.merge_existing(path, payload, fresh, container_key="leagues")
+    util.write_json(path, payload)
     return out
 
 

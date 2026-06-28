@@ -38,9 +38,14 @@ def build(cfg: dict) -> dict:
     util.write_json(util.abspath(os.path.join(dd, "ratings.json")), ratings)
     util.write_json(util.abspath(os.path.join(dd, "profiles.json")), _slim_profiles(profiles))
 
+    # Build meta from the merged profiles (which already preserves any league that
+    # wasn't rebuilt this run); skip a configured league with no profile at all so
+    # its previously published meta survives the merge below.
     leagues_meta = {}
-    for league in cfg["leagues"]:
+    for league in (cfg.get("_all_leagues") or cfg["leagues"]):
         lp = profiles.get(league, {})
+        if not lp:
+            continue
         leagues_meta[league] = {
             "season": cfg[league]["season"],
             "n_teams": len(lp.get("teams", {})),
@@ -51,7 +56,10 @@ def build(cfg: dict) -> dict:
         }
     meta = {"generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
             "leagues": leagues_meta}
-    util.write_json(util.abspath(os.path.join(dd, "meta.json")), meta)
+    meta_path = util.abspath(os.path.join(dd, "meta.json"))
+    if util.should_merge(cfg, leagues_meta):
+        meta = util.merge_existing(meta_path, meta, list(leagues_meta.keys()), container_key="leagues")
+    util.write_json(meta_path, meta)
     util.log(f"build_site: refreshed docs/data ({meta['generated']})")
     return meta
 

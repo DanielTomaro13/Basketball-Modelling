@@ -1,12 +1,15 @@
-"""Orchestrator — run the full NBA + NBL pipeline end to end.
+"""Orchestrator — run the full NBA + NBL + WNBA pipeline end to end.
 
-    python -m src.run_daily          # full rebuild (results + backtest + odds)
-    python -m src.run_daily --quick  # skip results derivation + backtest (faster)
+    python -m src.run_daily                 # full rebuild (results + backtest + odds)
+    python -m src.run_daily --quick         # skip results derivation + backtest (faster)
+    python -m src.run_daily --league wnba   # rebuild a single league (repeatable)
+    python -m src.run_daily --league nba --league nbl
 
 Stages: ingest -> features -> ratings -> (evaluate) -> scrape -> predict ->
-players -> build_site -> (odds). Everything is sourced from cloud-reachable public
-APIs (ESPN for the NBA, nbl.com.au for the NBL), so the whole thing runs on
-GitHub Actions.
+players -> build_site -> (odds). NBA is sourced from ESPN and NBL from nbl.com.au
+(both cloud-reachable, so they run on GitHub Actions); WNBA is sourced from
+stats.wnba.com, which is Akamai-walled for cloud IPs and so runs from a local/AU
+networked context (like the AU odds cron).
 """
 from __future__ import annotations
 
@@ -17,9 +20,27 @@ from . import (build_site, evaluate, features, fixtures, futures, ingest, leader
                odds, players, predict, ratings, scrape_schedule, supercoach, util)
 
 
-def run(quick: bool = False) -> int:
+def _leagues_arg(argv: list[str]) -> list[str]:
+    """Parse repeated ``--league X`` flags; empty means all configured leagues."""
+    out = []
+    for i, a in enumerate(argv):
+        if a == "--league" and i + 1 < len(argv):
+            out.append(argv[i + 1].lower())
+        elif a.startswith("--league="):
+            out.append(a.split("=", 1)[1].lower())
+    return out
+
+
+def run(quick: bool = False, leagues: list[str] | None = None) -> int:
     cfg = util.load_config()
     util.load_env()
+    cfg["_all_leagues"] = list(cfg["leagues"])
+    if leagues:
+        unknown = [lg for lg in leagues if lg not in cfg["leagues"]]
+        if unknown:
+            util.log(f"run_daily: unknown league(s) {unknown}; known: {cfg['leagues']}")
+        cfg["leagues"] = [lg for lg in cfg["leagues"] if lg in leagues] or cfg["leagues"]
+        util.log(f"run_daily: restricted to leagues {cfg['leagues']}")
     t0 = time.time()
 
     util.log("=== 1/8 ingest ===")
@@ -49,7 +70,7 @@ def run(quick: bool = False) -> int:
         util.log(f"run_daily: scrape failed ({exc})")
 
     util.log("=== 6/8 predict ===")
-    predict.main([])
+    predict.build(cfg)
 
     util.log("=== 7/9 players + futures + supercoach ===")
     try:
@@ -87,4 +108,5 @@ def run(quick: bool = False) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(run(quick="--quick" in sys.argv[1:]))
+    _argv = sys.argv[1:]
+    raise SystemExit(run(quick="--quick" in _argv, leagues=_leagues_arg(_argv)))

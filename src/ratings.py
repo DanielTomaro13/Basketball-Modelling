@@ -107,8 +107,14 @@ def build(cfg: dict) -> tuple[dict, dict]:
         top = boards[league][0] if boards[league] else {}
         util.log(f"ratings[{league}]: {len(boards[league])} teams, top {top.get('name')} "
                  f"{top.get('elo')}")
-    util.write_json(util.abspath(os.path.join(models, "elo.json")), elos)
-    util.write_json(util.abspath(os.path.join(models, "ratings.json")), boards)
+    elo_path = util.abspath(os.path.join(models, "elo.json"))
+    board_path = util.abspath(os.path.join(models, "ratings.json"))
+    fresh = [lg for lg in (cfg.get("_all_leagues") or cfg["leagues"]) if lg in elos]
+    if util.should_merge(cfg, elos):
+        elos = util.merge_existing(elo_path, elos, fresh)
+        boards = util.merge_existing(board_path, boards, fresh)
+    util.write_json(elo_path, elos)
+    util.write_json(board_path, boards)
     return elos, boards
 
 

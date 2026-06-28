@@ -29,8 +29,17 @@ def build(cfg: dict) -> tuple[dict, list[dict]]:
             }
             index.append({"id": pid, "name": p["name"], "team": p.get("teamAbbr", ""), "league": league})
     dd = cfg["paths"]["docs_data_dir"]
-    util.write_json(util.abspath(os.path.join(dd, "players.json")), cards)
-    util.write_json(util.abspath(os.path.join(dd, "players-index.json")), index)
+    cards_path = util.abspath(os.path.join(dd, "players.json"))
+    index_path = util.abspath(os.path.join(dd, "players-index.json"))
+    fresh = [lg for lg in (cfg.get("_all_leagues") or cfg["leagues"]) if lg in cards]
+    if util.should_merge(cfg, cards):
+        cards = util.merge_existing(cards_path, cards, fresh)
+        old_index = util.read_json(index_path) if os.path.exists(index_path) else []
+        if isinstance(old_index, list):
+            kept = [r for r in old_index if r.get("league") not in fresh]
+            index = kept + index
+    util.write_json(cards_path, cards)
+    util.write_json(index_path, index)
     util.log(f"players: {sum(len(c) for c in cards.values())} cards across {len(cards)} leagues")
     return cards, index
 

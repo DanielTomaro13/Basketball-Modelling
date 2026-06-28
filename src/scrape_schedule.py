@@ -1,8 +1,9 @@
 """Scrape stage — upcoming fixtures per league into ``data/fixtures.csv``.
 
 NBA: the ESPN scoreboard for today .. today+days_ahead. NBL: the rosetta match
-feed (wired in the NBL branch). Off-season both simply return nothing — the
-pipeline then prices the model's featured matchups instead.
+feed (wired in the NBL branch). WNBA: the stats.wnba.com scoreboard for the same
+window. Off-season they all simply return nothing — the pipeline then prices the
+model's featured matchups instead.
 """
 from __future__ import annotations
 
@@ -73,6 +74,43 @@ def _rosetta_upcoming(cfg: dict, league: str) -> list[dict]:
     return out
 
 
+def _stats_upcoming(cfg: dict, league: str) -> list[dict]:
+    """Upcoming WNBA games from the stats.wnba.com scoreboard over the schedule window."""
+    from . import ingest
+    base = cfg[league]["stats_base"]
+    hdrs = ingest._headers(cfg, league)
+    teams_path = util.abspath(f"data/raw/teams-{league}.json")
+    teams = util.read_json(teams_path) if os.path.exists(teams_path) else {}
+    id2abbr = {tid: t.get("abbr", "") for tid, t in teams.items()}
+    out, seen = [], set()
+    today = datetime.date.today()
+    for d in range(cfg["fixtures"]["days_ahead"] + 1):
+        day = (today + datetime.timedelta(days=d)).strftime("%Y-%m-%d")
+        data = util.http_get_json(f"{base}/scoreboardv2?DayOffset=0&LeagueID={cfg[league]['league_id']}&GameDate={day}",
+                                  headers=hdrs, pause=0.6)
+        sets = {}
+        for rs in (data or {}).get("resultSets", []) if isinstance(data, dict) else []:
+            sets[rs.get("name", "")] = {"headers": rs.get("headers", []), "rowSet": rs.get("rowSet", [])}
+        header = sets.get("GameHeader", {})
+        cols = header.get("headers", [])
+        for row in header.get("rowSet", []):
+            r = dict(zip(cols, row))
+            status = int(util.num(r.get("GAME_STATUS_ID")))  # 1 = scheduled, 2 = live, 3 = final
+            if status == 3:
+                continue
+            gid = str(r.get("GAME_ID"))
+            if not gid or gid in seen:
+                continue
+            hid, aid = str(r.get("HOME_TEAM_ID")), str(r.get("VISITOR_TEAM_ID"))
+            if hid not in id2abbr or aid not in id2abbr:
+                continue
+            seen.add(gid)
+            out.append({"league": league, "gameId": gid, "date": day,
+                        "homeId": hid, "awayId": aid,
+                        "homeAbbr": id2abbr.get(hid, ""), "awayAbbr": id2abbr.get(aid, "")})
+    return out
+
+
 def scrape(cfg: dict) -> list[dict]:
     rows = []
     for league in cfg["leagues"]:
@@ -82,6 +120,8 @@ def scrape(cfg: dict) -> list[dict]:
                 got = _espn_upcoming(cfg, league)
             elif src == "rosetta":
                 got = _rosetta_upcoming(cfg, league)
+            elif src == "stats":
+                got = _stats_upcoming(cfg, league)
             else:
                 got = []
             util.log(f"scrape[{league}]: {len(got)} upcoming")

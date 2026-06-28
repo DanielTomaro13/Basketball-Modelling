@@ -170,7 +170,7 @@ def model_price(sel_id, params):
 # Books — list_events() -> [{league,id,p1,p2,(raw)}] ; markets(ev) -> [(name,[(sel,price)])]
 # Each resolves the NBA + NBL competitions by name; missing ids just yield [].
 # --------------------------------------------------------------------------- #
-_COMP_NAMES = {"nba": ("nba",), "nbl": ("nbl",)}
+_COMP_NAMES = {"nba": ("nba",), "nbl": ("nbl",), "wnba": ("wnba",)}
 
 
 def _league_of(comp_name):
@@ -597,7 +597,10 @@ def _fut_market(name: str):
     return (None, None, None)
 
 
-_SB_FUTURES_CLASS = {"nba": 16, "nbl": 63}   # Basketball - US / Basketball - Aus-Other
+# Basketball - US (16; NBA + WNBA outrights live here) / Basketball - Aus-Other (63).
+# WNBA can be overridden via SB_WNBA_FUTURES_CLASS if a book splits it out.
+_SB_FUTURES_CLASS = {"nba": 16, "nbl": 63,
+                     "wnba": int(os.environ.get("SB_WNBA_FUTURES_CLASS", "16"))}
 
 
 def _sb_futures(league: str) -> list[tuple]:
@@ -644,6 +647,7 @@ def _pb_futures(league: str) -> list[tuple]:
 _LAD_FUTURES = {
     "nba": os.environ.get("LAD_NBA_FUTURES_EVENT", "606d2346-7fc6-4ec8-9ed7-251e6b1ae945"),
     "nbl": os.environ.get("LAD_NBL_FUTURES_EVENT", ""),
+    "wnba": os.environ.get("LAD_WNBA_FUTURES_EVENT", ""),
 }
 
 
@@ -785,8 +789,11 @@ def futures_odds(cfg: dict) -> dict:
             if key == "championship":
                 champ = [{**r, "team": r["name"]} for r in rows]
         out[league] = {"games": games, "markets": markets, "championship": champ}
-    util.write_json(util.abspath(os.path.join(dd, "futures-odds.json")),
-                    {"generated": _now(), "books": sorted(books_present), "leagues": out})
+    fo_path = util.abspath(os.path.join(dd, "futures-odds.json"))
+    payload = {"generated": _now(), "books": sorted(books_present), "leagues": out}
+    if util.is_partial_run(cfg):
+        payload = util.merge_existing(fo_path, payload, cfg["leagues"], container_key="leagues")
+    util.write_json(fo_path, payload)
     nmkt = sum(len(lg["markets"]) for lg in out.values())
     util.log(f"odds: futures — {nmkt} markets across {sorted(books_present) or 'no books'}")
     return {"markets": nmkt, "books": sorted(books_present)}

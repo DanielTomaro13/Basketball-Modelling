@@ -1,7 +1,9 @@
 """Ingest stage — download + cache public basketball stats per league.
 
 NBA is sourced from the ESPN public JSON API (anonymous, cloud-reachable). NBL is
-sourced from the nbl.com.au "rosetta" data API (added in the NBL branch). Outputs:
+sourced from the nbl.com.au "rosetta" data API (added in the NBL branch). WNBA is
+sourced from the WNBA stats API (stats.wnba.com — the stats.nba.com family with
+LeagueID=10 and single-calendar-year seasons). Outputs:
 
 * ``data/raw/teams-{league}.json``        team id -> {abbr, name}
 * ``data/raw/teamstats-{league}.json``    team id -> season pace/shooting rates
@@ -21,8 +23,15 @@ from . import util
 # Per-league HTTP headers
 # --------------------------------------------------------------------------- #
 def _headers(cfg: dict, league: str) -> dict:
-    if cfg[league]["source"] == "rosetta":
+    src = cfg[league]["source"]
+    if src == "rosetta":
         return {"Origin": "https://nbl.com.au", "Referer": "https://nbl.com.au/"}
+    if src == "stats":
+        # stats.wnba.com / stats.nba.com need a browser-ish header bundle.
+        return {"Referer": "https://www.wnba.com/", "Origin": "https://www.wnba.com",
+                "x-nba-stats-origin": "stats", "x-nba-stats-token": "true",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9", "Connection": "keep-alive"}
     return {}
 
 
@@ -239,6 +248,162 @@ def _rosetta_players(cfg: dict, league: str, season) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# WNBA stats API (stats.wnba.com — the stats.nba.com family, LeagueID=10)
+# Endpoints return {"resultSets": [{"name", "headers", "rowSet": [[...]]}]}.
+# Seasons are single calendar years ("2025"), not spans.
+# --------------------------------------------------------------------------- #
+# Static team meta so tricodes are stable even if a feed omits the abbreviation;
+# the numeric team ids come from the live feed and are matched in by tricode.
+_WNBA_TEAMS = {
+    "ATL": "Atlanta Dream", "CHI": "Chicago Sky", "CON": "Connecticut Sun",
+    "DAL": "Dallas Wings", "GSV": "Golden State Valkyries", "IND": "Indiana Fever",
+    "LVA": "Las Vegas Aces", "LAS": "Los Angeles Sparks", "MIN": "Minnesota Lynx",
+    "NYL": "New York Liberty", "PHO": "Phoenix Mercury", "SEA": "Seattle Storm",
+    "WAS": "Washington Mystics",
+}
+
+
+def _stats_get(cfg: dict, league: str, endpoint: str, params: dict):
+    """GET a stats endpoint and return its resultSets list (name -> {headers, rowSet})."""
+    base = cfg[league]["stats_base"]
+    qs = util_urlencode(params)
+    data = util.http_get_json(f"{base}/{endpoint}?{qs}", headers=_headers(cfg, league), pause=0.6, retries=4)
+    sets = {}
+    for rs in (data or {}).get("resultSets", []) if isinstance(data, dict) else []:
+        sets[rs.get("name", "")] = {"headers": rs.get("headers", []), "rowSet": rs.get("rowSet", [])}
+    # some endpoints return a single dict under "resultSet"
+    rs = (data or {}).get("resultSet") if isinstance(data, dict) else None
+    if isinstance(rs, dict) and rs.get("name"):
+        sets[rs["name"]] = {"headers": rs.get("headers", []), "rowSet": rs.get("rowSet", [])}
+    return sets
+
+
+def util_urlencode(params: dict) -> str:
+    import urllib.parse
+    return urllib.parse.urlencode(params)
+
+
+def _rows(rset: dict) -> list[dict]:
+    """Zip a resultSet's headers with each row into dicts."""
+    hdrs = rset.get("headers", [])
+    return [dict(zip(hdrs, row)) for row in rset.get("rowSet", [])]
+
+
+def _abbr_for(name: str, tricode: str) -> str:
+    """Resolve a stable tricode for a WNBA team from its feed tricode or full name."""
+    if tricode and tricode.upper() in _WNBA_TEAMS:
+        return tricode.upper()
+    nm = (name or "").lower()
+    for ab, full in _WNBA_TEAMS.items():
+        last = full.split()[-1].lower()
+        if full.lower() in nm or (len(last) >= 4 and last in nm):
+            return ab
+    return (tricode or "").upper()
+
+
+def _stats_team_stats(cfg: dict, league: str, season) -> tuple[dict, dict]:
+    """Return (teams, team-stats) from leaguedashteamstats (per-game + advanced pace)."""
+    base_p = {"LeagueID": cfg[league]["league_id"], "Season": str(season),
+              "SeasonType": cfg[league]["season_type"], "PerMode": "PerGame",
+              "MeasureType": "Base", "PaceAdjust": "N", "PlusMinus": "N", "Rank": "N",
+              "Outcome": "", "Location": "", "Month": "0", "SeasonSegment": "",
+              "DateFrom": "", "DateTo": "", "OpponentTeamID": "0", "VsConference": "",
+              "VsDivision": "", "GameSegment": "", "Period": "0", "LastNGames": "0",
+              "TeamID": "0", "Conference": "", "Division": "", "GameScope": "",
+              "PlayerExperience": "", "PlayerPosition": "", "StarterBench": "",
+              "TwoWay": "0", "ShotClockRange": ""}
+    base = _stats_get(cfg, league, "leaguedashteamstats", base_p)
+    adv = _stats_get(cfg, league, "leaguedashteamstats", {**base_p, "MeasureType": "Advanced"})
+    teams, stats = {}, {}
+    pace_by_id = {r.get("TEAM_ID"): util.num(r.get("PACE")) for r in _rows(adv.get("LeagueDashTeamStats", {}))}
+    for r in _rows(base.get("LeagueDashTeamStats", {})):
+        tid = r.get("TEAM_ID")
+        if tid is None:
+            continue
+        tid = str(tid)
+        name = r.get("TEAM_NAME", "")
+        abbr = _abbr_for(name, r.get("TEAM_ABBREVIATION", ""))
+        teams[tid] = {"id": tid, "abbr": abbr, "name": _WNBA_TEAMS.get(abbr, name)}
+        fga = util.num(r.get("FGA")); fta = util.num(r.get("FTA"))
+        tov = util.num(r.get("TOV")); oreb = util.num(r.get("OREB"))
+        pace = pace_by_id.get(r.get("TEAM_ID")) or (fga - oreb + tov + 0.44 * fta)
+        stats[tid] = {
+            "paceFactor": {"value": round(pace, 2)},
+            "avgPoints": {"value": util.num(r.get("PTS"))},
+            "avgAssists": {"value": util.num(r.get("AST"))},
+            "fieldGoalsAttempted": {"per_game": round(fga, 1)},
+            "freeThrowsAttempted": {"per_game": round(fta, 1)},
+            "offensiveRebounds": {"per_game": round(oreb, 1)},
+            "turnovers": {"per_game": round(tov, 1)},
+            "threePointFieldGoalsAttempted": {"per_game": round(util.num(r.get("FG3A")), 1)},
+            "threePointFieldGoalsMade": {"per_game": round(util.num(r.get("FG3M")), 1)},
+        }
+    return teams, stats
+
+
+def _stats_players(cfg: dict, league: str, season, teams: dict) -> dict:
+    """All players' season per-game rates via leaguedashplayerstats (PerGame)."""
+    p = {"LeagueID": cfg[league]["league_id"], "Season": str(season),
+         "SeasonType": cfg[league]["season_type"], "PerMode": "PerGame",
+         "MeasureType": "Base", "PaceAdjust": "N", "PlusMinus": "N", "Rank": "N",
+         "Outcome": "", "Location": "", "Month": "0", "SeasonSegment": "",
+         "DateFrom": "", "DateTo": "", "OpponentTeamID": "0", "VsConference": "",
+         "VsDivision": "", "GameSegment": "", "Period": "0", "LastNGames": "0",
+         "TeamID": "0", "Conference": "", "Division": "", "GameScope": "",
+         "PlayerExperience": "", "PlayerPosition": "", "StarterBench": "",
+         "TwoWay": "0", "ShotClockRange": ""}
+    sets = _stats_get(cfg, league, "leaguedashplayerstats", p)
+    out = {}
+    for r in _rows(sets.get("LeagueDashPlayerStats", {})):
+        pid = r.get("PLAYER_ID")
+        if pid is None:
+            continue
+        pid = str(pid)
+        tid = str(r.get("TEAM_ID")) if r.get("TEAM_ID") is not None else ""
+        abbr = (teams.get(tid, {}) or {}).get("abbr") or _abbr_for(r.get("TEAM_ABBREVIATION", ""), r.get("TEAM_ABBREVIATION", ""))
+        out[pid] = {
+            "id": pid, "name": r.get("PLAYER_NAME", ""), "teamAbbr": abbr, "teamId": tid,
+            "gp": util.num(r.get("GP")), "min": util.num(r.get("MIN")),
+            "pts": util.num(r.get("PTS")), "reb": util.num(r.get("REB")),
+            "ast": util.num(r.get("AST")), "fg3m": util.num(r.get("FG3M")),
+            "fgm": util.num(r.get("FGM")), "ftm": util.num(r.get("FTM")),
+            "stl": util.num(r.get("STL")), "blk": util.num(r.get("BLK")),
+            "tov": util.num(r.get("TOV")), "dd": util.num(r.get("DD2")),
+            "td": util.num(r.get("TD3")),
+        }
+    return out
+
+
+def _stats_results(cfg: dict, league: str, season, teams: dict) -> list[dict]:
+    """League-wide final scores for one season from leaguegamelog (one row per team-game)."""
+    p = {"LeagueID": cfg[league]["league_id"], "Season": str(season),
+         "SeasonType": cfg[league]["season_type"], "PlayerOrTeam": "T",
+         "Counter": "1000", "Sorter": "DATE", "Direction": "ASC", "DateFrom": "", "DateTo": ""}
+    sets = _stats_get(cfg, league, "leaguegamelog", p)
+    abbr_by_id = {tid: t.get("abbr", "") for tid, t in teams.items()}
+    by_game: dict[str, dict] = {}
+    for r in _rows(sets.get("LeagueGameLog", {})):
+        gid = str(r.get("GAME_ID"))
+        tid = str(r.get("TEAM_ID"))
+        matchup = r.get("MATCHUP", "") or ""
+        is_home = " vs. " in matchup            # "ATL vs. CHI" = home; "ATL @ CHI" = away
+        rec = {"id": tid, "abbr": abbr_by_id.get(tid) or _abbr_for(r.get("TEAM_NAME", ""), r.get("TEAM_ABBREVIATION", "")),
+               "pts": util.num(r.get("PTS")), "date": (r.get("GAME_DATE") or "")[:10], "home": is_home}
+        by_game.setdefault(gid, {})[("home" if is_home else "away")] = rec
+    rows = []
+    for gid, sides in by_game.items():
+        home, away = sides.get("home"), sides.get("away")
+        if not home or not away or home["pts"] <= 0 or away["pts"] <= 0:
+            continue
+        rows.append({"gameId": gid, "date": home["date"] or away["date"], "season": season,
+                     "homeId": home["id"], "awayId": away["id"],
+                     "homeAbbr": home["abbr"], "awayAbbr": away["abbr"],
+                     "homePts": home["pts"], "awayPts": away["pts"]})
+    rows.sort(key=lambda r: r["date"])
+    return rows
+
+
+# --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
 def _raw_path(name: str) -> str:
@@ -278,6 +443,17 @@ def download_core(cfg: dict) -> None:
             util.write_json(_raw_path(f"players-{league}.json"), players)
             util.log(f"ingest[{league}]: {len(teams)} teams, {len(tstats)} team-stat lines, "
                      f"{len(players)} players")
+        elif src == "stats":
+            teams, tstats = _stats_team_stats(cfg, league, season)
+            if not teams:
+                util.log(f"ingest[{league}]: no team stats returned — skipping")
+                continue
+            players = _stats_players(cfg, league, season, teams)
+            util.write_json(_raw_path(f"teams-{league}.json"), teams)
+            util.write_json(_raw_path(f"teamstats-{league}.json"), tstats)
+            util.write_json(_raw_path(f"players-{league}.json"), players)
+            util.log(f"ingest[{league}]: {len(teams)} teams, {len(tstats)} team-stat lines, "
+                     f"{len(players)} players")
         else:
             util.log(f"ingest[{league}]: unknown source {src!r}")
 
@@ -289,14 +465,21 @@ def derive_results(cfg: dict) -> None:
     for league in cfg["leagues"]:
         src = cfg[league]["source"]
         teams = {}
-        if src == "espn":
+        if src in ("espn", "stats"):
             teams_path = _raw_path(f"teams-{league}.json")
-            teams = util.read_json(teams_path) if os.path.exists(teams_path) else _espn_teams(cfg, league)
+            if os.path.exists(teams_path):
+                teams = util.read_json(teams_path)
+            elif src == "espn":
+                teams = _espn_teams(cfg, league)
+            else:  # stats
+                teams, _ = _stats_team_stats(cfg, league, cfg[league]["season"])
         for season in cfg[league]["history_seasons"]:
             if src == "espn":
                 rows = _espn_results(cfg, league, season, teams)
             elif src == "rosetta":
                 rows = _rosetta_results(cfg, league, season)
+            elif src == "stats":
+                rows = _stats_results(cfg, league, season, teams)
             else:
                 rows = []
             if not rows:

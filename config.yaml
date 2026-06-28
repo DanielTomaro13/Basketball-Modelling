@@ -1,12 +1,12 @@
 # ===========================================================================
-# Basketball-Modelling configuration  (NBA + NBL)
+# Basketball-Modelling configuration  (NBA + NBL + WNBA)
 # ===========================================================================
 # Single source of truth for the pipeline. Loaded once by util.load_config and
-# threaded through every stage. One repo, two leagues — each league has its own
+# threaded through every stage. One repo, three leagues — each league has its own
 # block (data source, game length, pace/scoring baselines); the model code is
 # shared and reads the active league's block.
 
-leagues: [nba, nbl]               # build order: NBA first, then NBL
+leagues: [nba, nbl, wnba]         # build order: NBA, then NBL, then WNBA
 
 # --------------------------------------------------------------------------- #
 # NBA — sourced from the ESPN hidden API (no auth, cloud-reachable => runs on
@@ -59,6 +59,36 @@ nbl:
   supercoach_year: 2025
   games_per_season: 28
   playoff_teams: 6
+
+# --------------------------------------------------------------------------- #
+# WNBA — sourced from the WNBA stats API (stats.wnba.com), which mirrors
+# stats.nba.com but with LeagueID=10 and single-calendar-year seasons
+# (Season="2025" is the 2025 season). 40-minute game (4 x 10), ~13 teams, a
+# 44-game regular season. The stats host is Akamai-walled for cloud IPs, so this
+# league runs from a local/AU networked context (like the AU odds cron), not CI.
+# SuperCoach has no WNBA competition, so fantasy-wnba.json is emitted empty-but-
+# valid for graceful empty states.
+# --------------------------------------------------------------------------- #
+wnba:
+  source: "stats"
+  stats_base: "https://stats.wnba.com/stats"
+  league_id: "10"                 # WNBA in the stats API (NBA = 00)
+  season: "2025"                  # single calendar year (not a span)
+  history_seasons: ["2023", "2024", "2025"]
+  season_type: "Regular Season"   # stats API SeasonType param
+  quarters: 4
+  quarter_minutes: 10             # 40-minute game
+  league_pace: 96.0
+  league_ortg: 102.0
+  league_ppg: 82.0
+  home_edge_pts: 2.4
+  sigma_margin: 11.8
+  sigma_total: 15.5
+  ot_push: 0.05
+  prop_minutes_default: 24.0
+  supercoach_year: 2025
+  games_per_season: 44            # regular-season games (futures win totals)
+  playoff_teams: 8                # teams in the post-season bracket
 
 # --------------------------------------------------------------------------- #
 # Team / player profiles (shared) — shrink small samples toward the league mean
@@ -115,3 +145,4 @@ paths:
 backtest:
   nba_holdout_season: 2026
   nbl_holdout_season: 2025
+  wnba_holdout_season: 2025
