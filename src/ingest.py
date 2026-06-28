@@ -260,14 +260,19 @@ _WNBA_TEAMS = {
     "LVA": "Las Vegas Aces", "LAS": "Los Angeles Sparks", "MIN": "Minnesota Lynx",
     "NYL": "New York Liberty", "PHO": "Phoenix Mercury", "SEA": "Seattle Storm",
     "WAS": "Washington Mystics",
+    "TOR": "Toronto Tempo", "PDX": "Portland Fire",  # 2026 expansion
 }
+
+# stats.wnba.com (Akamai) throttles ~1 req / 2.5s; hammering faster gets the IP
+# black-holed (read timeouts). Tunable via STATS_PAUSE for slower/faster links.
+_STATS_PAUSE = float(os.environ.get("STATS_PAUSE", "2.5"))
 
 
 def _stats_get(cfg: dict, league: str, endpoint: str, params: dict):
     """GET a stats endpoint and return its resultSets list (name -> {headers, rowSet})."""
     base = cfg[league]["stats_base"]
     qs = util_urlencode(params)
-    data = util.http_get_json(f"{base}/{endpoint}?{qs}", headers=_headers(cfg, league), pause=0.6, retries=4)
+    data = util.http_get_json(f"{base}/{endpoint}?{qs}", headers=_headers(cfg, league), pause=_STATS_PAUSE, retries=4)
     sets = {}
     for rs in (data or {}).get("resultSets", []) if isinstance(data, dict) else []:
         sets[rs.get("name", "")] = {"headers": rs.get("headers", []), "rowSet": rs.get("rowSet", [])}
