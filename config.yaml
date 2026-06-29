@@ -70,12 +70,12 @@ nbl:
 # valid for graceful empty states.
 # --------------------------------------------------------------------------- #
 wnba:
-  source: "stats"
-  stats_base: "https://stats.wnba.com/stats"
-  league_id: "10"                 # WNBA in the stats API (NBA = 00)
-  season: "2025"                  # single calendar year (not a span)
-  history_seasons: ["2023", "2024", "2025"]
-  season_type: "Regular Season"   # stats API SeasonType param
+  source: "espn"                  # ESPN public API: anonymous + cloud-reachable
+  espn_site: "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba"
+  espn_core: "https://sports.core.api.espn.com/v2/sports/basketball/leagues/wnba"
+  season: 2026                    # current WNBA season (calendar year)
+  history_seasons: [2024, 2025, 2026]
+  season_type: 2                  # ESPN: 2 = regular season
   quarters: 4
   quarter_minutes: 10             # 40-minute game
   league_pace: 96.0
