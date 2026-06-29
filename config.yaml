@@ -61,13 +61,12 @@ nbl:
   playoff_teams: 6
 
 # --------------------------------------------------------------------------- #
-# WNBA — sourced from the WNBA stats API (stats.wnba.com), which mirrors
-# stats.nba.com but with LeagueID=10 and single-calendar-year seasons
-# (Season="2025" is the 2025 season). 40-minute game (4 x 10), ~13 teams, a
-# 44-game regular season. The stats host is Akamai-walled for cloud IPs, so this
-# league runs from a local/AU networked context (like the AU odds cron), not CI.
-# SuperCoach has no WNBA competition, so fantasy-wnba.json is emitted empty-but-
-# valid for graceful empty states.
+# WNBA — sourced from ESPN's public API (anonymous + cloud-reachable, the same
+# source the NBA uses), so this league runs anywhere including CI. (stats.wnba.com
+# was the original plan but it's Akamai-walled/IP-throttled for cloud IPs; ESPN
+# avoids that entirely.) 40-minute game (4 x 10), ~15 teams (2026), a 44-game
+# regular season. SuperCoach has no WNBA competition, so fantasy-wnba.json is
+# emitted empty-but-valid for graceful empty states.
 # --------------------------------------------------------------------------- #
 wnba:
   source: "espn"                  # ESPN public API: anonymous + cloud-reachable

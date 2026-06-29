@@ -1,9 +1,9 @@
 """Ingest stage — download + cache public basketball stats per league.
 
-NBA is sourced from the ESPN public JSON API (anonymous, cloud-reachable). NBL is
-sourced from the nbl.com.au "rosetta" data API (added in the NBL branch). WNBA is
-sourced from the WNBA stats API (stats.wnba.com — the stats.nba.com family with
-LeagueID=10 and single-calendar-year seasons). Outputs:
+NBA and WNBA are sourced from the ESPN public JSON API (anonymous, cloud-reachable).
+NBL is sourced from the nbl.com.au "rosetta" data API. (A `stats` source for
+stats.wnba.com also exists but is unused by default — that host is Akamai-walled
+for cloud IPs, so the WNBA uses ESPN instead.) Outputs:
 
 * ``data/raw/teams-{league}.json``        team id -> {abbr, name}
 * ``data/raw/teamstats-{league}.json``    team id -> season pace/shooting rates
