@@ -107,12 +107,15 @@ nbl,2027-02-13,Sydney Kings,Tasmania JackJumpers,0.7916,0.2084,1.26,4.8,94.6,82.
 nbl,2027-02-13,Melbourne United,Illawarra Hawks,0.5454,0.4546,1.83,2.2,98.4,96.6,195.0,False
 nbl,2027-02-14,South East Melbourne Phoenix,Brisbane Bullets,0.8688,0.1312,1.15,7.62,107.5,90.5,198.0,False
 nbl,2027-02-14,Adelaide 36ers,New Zealand Breakers,0.685,0.315,1.46,3.17,95.6,88.3,183.9,False
-wnba,2026-07-02,Washington Mystics,Atlanta Dream,0.3849,0.6151,2.6,1.63,82.5,86.5,169.0,False
-wnba,2026-07-03,Phoenix Mercury,Seattle Storm,0.6533,0.3467,1.53,2.88,85.3,79.8,165.1,False
-wnba,2026-07-03,Connecticut Sun,Dallas Wings,0.3565,0.6435,2.8,1.55,85.4,90.5,175.8,False
-wnba,2026-07-03,New York Liberty,Minnesota Lynx,0.4173,0.5827,2.4,1.72,89.0,91.9,180.9,False
-wnba,2026-07-04,Las Vegas Aces,Chicago Sky,0.7773,0.2227,1.29,4.49,90.0,79.4,169.4,False
-wnba,2026-07-04,Atlanta Dream,Golden State Valkyries,0.5993,0.4007,1.67,2.5,82.1,78.6,160.7,False
-wnba,2026-07-05,Las Vegas Aces,Indiana Fever,0.6445,0.3555,1.55,2.81,94.5,89.3,183.8,False
-wnba,2026-07-05,Seattle Storm,Portland Fire,0.607,0.393,1.65,2.54,89.5,85.8,175.3,False
-wnba,2026-07-05,Toronto Tempo,Dallas Wings,0.4955,0.5045,2.02,1.98,91.1,91.2,182.3,False
+wnba,2026-07-02,Washington Mystics,Atlanta Dream,0.3836,0.6164,2.61,1.62,85.1,89.2,174.3,False
+wnba,2026-07-03,Phoenix Mercury,Seattle Storm,0.6529,0.3471,1.53,2.88,84.9,79.5,164.3,False
+wnba,2026-07-03,Connecticut Sun,Dallas Wings,0.3574,0.6426,2.8,1.56,84.9,89.9,174.8,False
+wnba,2026-07-03,New York Liberty,Minnesota Lynx,0.4227,0.5773,2.37,1.73,87.0,89.7,176.7,False
+wnba,2026-07-04,Las Vegas Aces,Chicago Sky,0.7691,0.2309,1.3,4.33,89.2,79.0,168.2,False
+wnba,2026-07-04,Atlanta Dream,Golden State Valkyries,0.5903,0.4097,1.69,2.44,80.6,77.4,158.0,False
+wnba,2026-07-05,Las Vegas Aces,Indiana Fever,0.634,0.366,1.58,2.73,93.8,89.1,182.8,False
+wnba,2026-07-05,Seattle Storm,Portland Fire,0.6082,0.3918,1.64,2.55,91.6,87.8,179.4,False
+wnba,2026-07-05,Toronto Tempo,Dallas Wings,0.496,0.504,2.02,1.98,90.5,90.6,181.1,False
+wnba,2026-07-06,Washington Mystics,Golden State Valkyries,0.4013,0.5987,2.49,1.67,72.8,76.2,149.0,False
+wnba,2026-07-07,Minnesota Lynx,Connecticut Sun,0.8797,0.1203,1.14,8.31,90.2,74.0,164.1,False
+wnba,2026-07-07,Los Angeles Sparks,Seattle Storm,0.5994,0.4006,1.67,2.5,85.8,82.3,168.1,False
