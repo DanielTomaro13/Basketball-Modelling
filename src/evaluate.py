@@ -74,7 +74,11 @@ def evaluate_league(cfg: dict, league: str) -> dict:
     e = cfg["elo"]
     init, k, hf = e["initial"], e["k"], e["home_field"]
     regress, mov = e["season_regression"], e["mov_mult"]
-    holdout = int(cfg["backtest"].get(f"{league}_holdout_season", cfg[league]["season"]))
+    bt = cfg["backtest"]
+    hs = bt.get(f"{league}_holdout_seasons") or [bt.get(f"{league}_holdout_season",
+                                                        cfg[league]["season"])]
+    holdout_set = {int(s) for s in hs}
+    holdout = max(holdout_set)  # reported label
     lg_ppg = cfg[league]["league_ppg"]
     he = cfg[league]["home_edge_pts"]
     prior = cfg["features"]["team_prior_games"]
@@ -109,7 +113,7 @@ def evaluate_league(cfg: dict, league: str) -> dict:
             rh, ra = rating.get(h, init), rating.get(a, init)
             elo_p = ratings._expected(rh, ra, hf)
             home_win = hp > ap
-            if int(season) == holdout:
+            if int(season) in holdout_set:
                 # rebuild profiles from prior games once per date (cheap + honest)
                 d = r.get("date") or ""
                 if d != profiles_date:

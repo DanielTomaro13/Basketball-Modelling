@@ -31,6 +31,24 @@ def _team_scale(exp_pts: float, team: dict) -> float:
     return max(0.85, min(1.15, exp_pts / base))
 
 
+def _clip_f(f, lo=0.92, hi=1.08) -> float:
+    return max(lo, min(hi, f or 1.0))
+
+
+def _stat_scales(team_scale: float, opponent: dict) -> dict:
+    """Per-stat matchup scales. Scoring stats keep the team scale (the game
+    projection already prices this matchup's scoring environment); rebounds /
+    assists / threes also lean on what the OPPONENT'S defence allows for that
+    stat (features.build_opponent_factors, from the game logs)."""
+    al = (opponent or {}).get("opp_allow") or {}
+    root = team_scale ** 0.5
+    return {"pts": team_scale, "fgm": team_scale, "fg2m": team_scale, "ftm": team_scale,
+            "fg3m": team_scale * _clip_f(al.get("fg3m")),
+            "reb": _clip_f(al.get("reb")),
+            "ast": root * _clip_f(al.get("ast")),
+            "stl": 1.0, "blk": 1.0, "tov": 1.0}
+
+
 def project_fixture(cfg: dict, fx: dict, profiles: dict, elos: dict, agg_cache: dict) -> dict:
     league = fx["league"]
     home, away = fx["home"], fx["away"]
@@ -41,9 +59,13 @@ def project_fixture(cfg: dict, fx: dict, profiles: dict, elos: dict, agg_cache: 
 
     sh = _team_scale(g["mu_home"], home)
     sa = _team_scale(g["mu_away"], away)
+    ssh = _stat_scales(sh, away)   # home players face the away defence
+    ssa = _stat_scales(sa, home)
     props = {
-        "home": [sim.player_props(p, sh, agg, cfg["sim"]) for p in _rotation(profiles, league, home, cfg)],
-        "away": [sim.player_props(p, sa, agg, cfg["sim"]) for p in _rotation(profiles, league, away, cfg)],
+        "home": [sim.player_props(p, sh, agg, cfg["sim"], stat_scales=ssh)
+                 for p in _rotation(profiles, league, home, cfg)],
+        "away": [sim.player_props(p, sa, agg, cfg["sim"], stat_scales=ssa)
+                 for p in _rotation(profiles, league, away, cfg)],
     }
     return {
         "league": league, "gameId": fx.get("gameId"), "date": fx.get("date"),

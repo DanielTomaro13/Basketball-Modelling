@@ -118,27 +118,119 @@ def build_team_profiles(cfg: dict, league: str) -> tuple[dict, dict]:
     return out, aggregates
 
 
+_STAT_KEYS = ("pts", "reb", "ast", "fg3m", "fgm", "ftm", "stl", "blk", "tov")
+
+
+def _player_logs(cfg: dict, league: str) -> dict[str, list[dict]]:
+    """{playerId: [game lines, chronological]} from the game-log cache."""
+    from . import gamelogs
+    cache = gamelogs.load(cfg, league)
+    by_player: dict[str, list] = {}
+    for gid, g in cache.items():
+        for tid, lines in (g.get("teams") or {}).items():
+            for ln in lines:
+                by_player.setdefault(ln["id"], []).append({**ln, "date": g.get("date", "")})
+    for pid in by_player:
+        by_player[pid].sort(key=lambda x: x["date"])
+    return by_player
+
+
+def _recency_rates(logs: list[dict], halflife: float) -> tuple[dict, float, float]:
+    """Recency-weighted per-game rates + minutes over a player's game log.
+    Weight halves every ``halflife`` games (most recent game = weight 1)."""
+    n = len(logs)
+    wsum = 0.0
+    acc = {k: 0.0 for k in _STAT_KEYS}
+    macc = 0.0
+    for i, ln in enumerate(logs):
+        w = 0.5 ** ((n - 1 - i) / halflife)
+        wsum += w
+        macc += w * ln["min"]
+        for k in _STAT_KEYS:
+            acc[k] += w * ln.get(k, 0.0)
+    rates = {k: acc[k] / wsum for k in _STAT_KEYS}
+    return rates, macc / wsum, wsum
+
+
 def build_player_profiles(cfg: dict, league: str) -> dict:
-    """Per-game + per-minute rate profiles, shrunk for small samples."""
+    """Per-game rate profiles. With game logs available the rates and the
+    projected minutes are RECENCY-WEIGHTED (halflife features.log_halflife_games
+    games) and shrunk toward the season averages — a player's role change or
+    hot/cold stretch flows into the props instead of being averaged away.
+    Falls back to plain season averages where no logs exist (NBL)."""
     players_path = util.abspath(f"data/raw/players-{league}.json")
     players = util.read_json(players_path) if os.path.exists(players_path) else {}
     min_g = cfg["features"]["min_player_games"]
+    half = float(cfg["features"].get("log_halflife_games", 10))
+    prior = float(cfg["features"].get("log_prior_games", 4))
+    logs_by_player = _player_logs(cfg, league)
     out = {}
     for pid, p in players.items():
         gp, mins = p.get("gp", 0), p.get("min", 0.0)
         if gp < min_g or mins < 1.0:
             continue
-        per_min = {k: (p.get(k, 0.0) / mins if mins else 0.0)
-                   for k in ("pts", "reb", "ast", "fg3m", "fgm", "ftm", "stl", "blk", "tov")}
+        season_pg = {k: p.get(k, 0.0) for k in _STAT_KEYS}
+        use_min, pg, src = mins, season_pg, "season"
+        dd_rate = p.get("dd", 0.0) / gp if gp else 0.0
+        td_rate = p.get("td", 0.0) / gp if gp else 0.0
+        logs = logs_by_player.get(pid) or []
+        if len(logs) >= 3:
+            rates, rmin, n_eff = _recency_rates(logs, half)
+            w = n_eff / (n_eff + prior)     # shrink recency toward season average
+            pg = {k: w * rates[k] + (1 - w) * season_pg[k] for k in _STAT_KEYS}
+            use_min = w * rmin + (1 - w) * mins
+            src = "logs"
+            # double/triple-double rates measured off the logs
+            cats = [("pts",), ("reb",), ("ast",), ("stl",), ("blk",)]
+            dd_n = td_n = 0
+            for ln in logs:
+                tens = sum(1 for (k,) in cats if ln.get(k, 0.0) >= 10)
+                dd_n += 1 if tens >= 2 else 0
+                td_n += 1 if tens >= 3 else 0
+            dd_rate = dd_n / len(logs)
+            td_rate = td_n / len(logs)
+        per_min = {k: (pg[k] / use_min if use_min else 0.0) for k in _STAT_KEYS}
         out[pid] = {
             "id": pid, "name": p.get("name", ""), "teamAbbr": p.get("teamAbbr", ""),
-            "teamId": p.get("teamId", ""), "gp": gp, "min": round(mins, 1),
-            "pg": {k: round(p.get(k, 0.0), 3) for k in
-                   ("pts", "reb", "ast", "fg3m", "fgm", "ftm", "stl", "blk", "tov")},
+            "teamId": p.get("teamId", ""), "gp": gp, "min": round(use_min, 1),
+            "season_min": round(mins, 1), "rates_source": src,
+            "pg": {k: round(pg[k], 3) for k in _STAT_KEYS},
             "per_min": {k: round(v, 5) for k, v in per_min.items()},
-            "dd_rate": round(p.get("dd", 0.0) / gp, 3) if gp else 0.0,
-            "td_rate": round(p.get("td", 0.0) / gp, 3) if gp else 0.0,
+            "dd_rate": round(dd_rate, 3),
+            "td_rate": round(td_rate, 3),
         }
+    return out
+
+
+def build_opponent_factors(cfg: dict, league: str) -> dict:
+    """Per-team matchup factors: how much of each stat a defence allows
+    relative to the league, from the game logs. factor > 1 = allows more.
+    Shrunk toward 1.0 by games played."""
+    from . import gamelogs
+    cache = gamelogs.load(cfg, league)
+    if not cache:
+        return {}
+    prior = float(cfg["features"].get("opp_factor_prior_games", 12))
+    keys = ("pts", "reb", "ast", "fg3m")
+    allowed: dict[str, dict] = {}
+    for gid, g in cache.items():
+        teams = list((g.get("teams") or {}).items())
+        if len(teams) != 2:
+            continue
+        for (tid, _), (opp_tid, opp_lines) in ((teams[0], teams[1]), (teams[1], teams[0])):
+            tot = {k: sum(ln.get(k, 0.0) for ln in opp_lines) for k in keys}
+            d = allowed.setdefault(tid, {"g": 0, **{k: 0.0 for k in keys}})
+            d["g"] += 1
+            for k in keys:
+                d[k] += tot[k]
+    lg = {k: (sum(d[k] for d in allowed.values())
+              / max(1, sum(d["g"] for d in allowed.values()))) for k in keys}
+    out = {}
+    for tid, d in allowed.items():
+        g = d["g"]
+        w = g / (g + prior)
+        out[tid] = {k: round(1.0 + w * ((d[k] / g) / lg[k] - 1.0), 4) if lg[k] else 1.0
+                    for k in keys}
     return out
 
 
@@ -150,9 +242,13 @@ def build(cfg: dict) -> dict:
             continue
         teams, agg = build_team_profiles(cfg, league)
         players = build_player_profiles(cfg, league)
+        for tid, f in build_opponent_factors(cfg, league).items():
+            if tid in teams:
+                teams[tid]["opp_allow"] = f
+        n_logs = sum(1 for p in players.values() if p.get("rates_source") == "logs")
         profiles[league] = {"league": agg, "teams": teams, "players": players}
         util.log(f"features[{league}]: {len(teams)} teams, {len(players)} players "
-                 f"(lg {agg['ppg']} ppg, pace {agg['pace']})")
+                 f"({n_logs} log-based) (lg {agg['ppg']} ppg, pace {agg['pace']})")
     path = util.abspath(os.path.join(cfg["paths"]["models_dir"], "profiles.json"))
     # Preserve any league that wasn't rebuilt this run (a partial --league run, or a
     # full run where a network-walled league — e.g. WNBA from a cloud CI IP — yielded

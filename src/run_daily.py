@@ -16,8 +16,8 @@ from __future__ import annotations
 import sys
 import time
 
-from . import (build_site, evaluate, features, fixtures, futures, ingest, leaders,
-               odds, players, predict, ratings, scrape_schedule, supercoach, util)
+from . import (build_site, evaluate, features, fixtures, futures, gamelogs, ingest,
+               leaders, odds, players, predict, ratings, scrape_schedule, supercoach, util)
 
 
 def _leagues_arg(argv: list[str]) -> list[str]:
@@ -47,6 +47,12 @@ def run(quick: bool = False, leagues: list[str] | None = None) -> int:
     ingest.download_core(cfg)
     if not quick:
         ingest.derive_results(cfg)
+    # per-game box scores (incremental; only games missing from the cache) —
+    # feeds the recency-weighted player rates + opponent matchup factors
+    try:
+        gamelogs.sync(cfg)
+    except Exception as exc:  # noqa: BLE001
+        util.log(f"run_daily: gamelogs skipped ({exc})")
 
     # evaluate runs BEFORE features: it writes models/calibration.json (empirical
     # sigma_margin / sigma_total / home edge from the walk-forward backtest) which

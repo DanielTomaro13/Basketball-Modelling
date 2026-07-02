@@ -401,14 +401,18 @@ def _prop_lines(mean: float, stat: str, steps: int) -> list[dict]:
 
 
 def player_props(player: dict, scale: float, agg: dict, sim_cfg: dict,
-                 minutes: float | None = None) -> dict:
-    """Markets for one player. ``scale`` adjusts pace/role for this matchup (≈1.0)."""
+                 minutes: float | None = None,
+                 stat_scales: dict | None = None) -> dict:
+    """Markets for one player. ``scale`` adjusts pace/role for this matchup (≈1.0).
+    ``stat_scales`` optionally overrides the scale per stat (opponent matchup
+    factors for rebounds / assists / threes; scoring stats keep ``scale``)."""
     pg = player["pg"]
     mins = minutes if minutes else player.get("min", 0.0)
     base_min = player.get("min", mins) or mins
     mscale = (mins / base_min) if base_min else 1.0
     steps = sim_cfg["prop_steps"]
-    means = {k: max(0.0, pg.get(k, 0.0) * scale * mscale) for k in _PROP_LABEL}
+    ss = stat_scales or {}
+    means = {k: max(0.0, pg.get(k, 0.0) * ss.get(k, scale) * mscale) for k in _PROP_LABEL}
     means["fg2m"] = max(0.0, means["fgm"] - means["fg3m"])   # two-pointers = FG made − threes
 
     singles = []

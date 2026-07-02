@@ -97,6 +97,12 @@ features:
   player_prior_games: 15          # prior GP for a player's rate
   min_player_games: 5             # below this a player is treated as fringe
   min_player_minutes: 12.0        # min projected minutes to publish props
+  # Game-log props (ESPN leagues): recency-weighted rates + minutes, halflife in
+  # games; shrunk toward the season average with this prior weight. Opponent
+  # allowed-stat factors (reb/ast/3PM matchups) shrink toward 1.0 by games.
+  log_halflife_games: 10
+  log_prior_games: 4
+  opp_factor_prior_games: 12
 
 # --------------------------------------------------------------------------- #
 # Team Elo (results-based baseline, per league)
@@ -143,5 +149,7 @@ paths:
 # --------------------------------------------------------------------------- #
 backtest:
   nba_holdout_season: 2026
-  nbl_holdout_season: 2025
+  # NBL results run ~100 games/season — two holdout seasons keep the sigma
+  # calibration sample workable (walk-forward, so still leakage-free)
+  nbl_holdout_seasons: [2024, 2025]
   wnba_holdout_season: 2025
