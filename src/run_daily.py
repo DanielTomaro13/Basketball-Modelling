@@ -48,20 +48,23 @@ def run(quick: bool = False, leagues: list[str] | None = None) -> int:
     if not quick:
         ingest.derive_results(cfg)
 
-    util.log("=== 2/8 features ===")
-    features.build(cfg)
-    util.log("=== 3/8 ratings ===")
-    try:
-        ratings.build(cfg)
-    except Exception as exc:  # noqa: BLE001
-        util.log(f"run_daily: ratings skipped ({exc})")
-
+    # evaluate runs BEFORE features: it writes models/calibration.json (empirical
+    # sigma_margin / sigma_total / home edge from the walk-forward backtest) which
+    # features overlays onto the league aggregates the whole market book prices with.
     if not quick:
-        util.log("=== 4/8 evaluate (backtest) ===")
+        util.log("=== 2/8 evaluate (backtest + sigma calibration) ===")
         try:
             evaluate.build(cfg)
         except Exception as exc:  # noqa: BLE001
             util.log(f"run_daily: backtest skipped ({exc})")
+
+    util.log("=== 3/8 features ===")
+    features.build(cfg)
+    util.log("=== 4/8 ratings ===")
+    try:
+        ratings.build(cfg)
+    except Exception as exc:  # noqa: BLE001
+        util.log(f"run_daily: ratings skipped ({exc})")
 
     util.log("=== 5/8 scrape schedule ===")
     try:

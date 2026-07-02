@@ -1,0 +1,1 @@
+{"nba": {"n": 1231, "sigma_margin": 14.72, "sigma_total": 19.0, "home_edge_pts": 1.73, "holdout_season": 2026}, "wnba": {"n": 287, "sigma_margin": 13.79, "sigma_total": 16.46, "home_edge_pts": 2.53, "holdout_season": 2025}, "nbl": {"n": 100, "sigma_margin": 15.13, "sigma_total": 18.52, "home_edge_pts": 1.23, "holdout_season": 2025}}

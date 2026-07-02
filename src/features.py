@@ -25,6 +25,31 @@ def _season_results(cfg: dict, league: str) -> list[dict]:
     return []
 
 
+def opponent_adjust(games: dict, lg_ppg: float, he: float, iterations: int = 12) -> tuple[dict, dict]:
+    """SRS-style iterative opponent adjustment in points-per-game space.
+
+    ``games`` = {team: [(pts_for, pts_against, opponent, is_home), ...]}.
+    Returns (adj_offense, adj_defense) per team, unshrunk. Also used by the
+    walk-forward backtest (profiles rebuilt from prior games only).
+    """
+    ids = list(games.keys())
+    adj_o = {t: lg_ppg for t in ids}
+    adj_d = {t: lg_ppg for t in ids}
+    for _ in range(iterations):
+        new_o, new_d = {}, {}
+        for t in ids:
+            so = sd = 0.0
+            for pf, pa, opp, is_home in games[t]:
+                edge = he / 2 if is_home else -he / 2
+                so += (pf - edge) - (adj_d.get(opp, lg_ppg) - lg_ppg)
+                sd += (pa + edge) - (adj_o.get(opp, lg_ppg) - lg_ppg)
+            g = len(games[t])
+            new_o[t] = so / g
+            new_d[t] = sd / g
+        adj_o, adj_d = new_o, new_d
+    return adj_o, adj_d
+
+
 def build_team_profiles(cfg: dict, league: str) -> tuple[dict, dict]:
     """Return (teams dict keyed by id, league aggregates). Adjusted o/d in points/game."""
     teams_path = util.abspath(f"data/raw/teams-{league}.json")
@@ -48,26 +73,11 @@ def build_team_profiles(cfg: dict, league: str) -> tuple[dict, dict]:
     lg_ppg = (pf_tot / n_tot) if n_tot else cfg[league]["league_ppg"]
     he = cfg[league]["home_edge_pts"]
 
-    ids = list(games.keys())
-    adj_o = {t: lg_ppg for t in ids}
-    adj_d = {t: lg_ppg for t in ids}
-    # iterate opponent adjustment: a team's offense = its scoring minus how much the
-    # defences it faced differ from average (and remove home edge); symmetric for defence.
-    for _ in range(12):
-        new_o, new_d = {}, {}
-        for t in ids:
-            so = sd = 0.0
-            for pf, pa, opp, is_home in games[t]:
-                edge = he / 2 if is_home else -he / 2
-                so += (pf - edge) - (adj_d.get(opp, lg_ppg) - lg_ppg)
-                sd += (pa + edge) - (adj_o.get(opp, lg_ppg) - lg_ppg)
-            g = len(games[t])
-            new_o[t] = so / g
-            new_d[t] = sd / g
-        adj_o, adj_d = new_o, new_d
+    adj_o, adj_d = opponent_adjust(games, lg_ppg, he)
 
     # shrink toward league mean by games played
     prior = cfg["features"]["team_prior_games"]
+    ids = list(games.keys())
     out = {}
     paces = []
     for t in ids:
@@ -94,6 +104,17 @@ def build_team_profiles(cfg: dict, league: str) -> tuple[dict, dict]:
                   "sigma_margin": cfg[league]["sigma_margin"],
                   "sigma_total": cfg[league]["sigma_total"],
                   "ot_push": cfg[league]["ot_push"]}
+    # Overlay the empirically calibrated sigmas / home edge from the walk-forward
+    # backtest (models/calibration.json, written by evaluate) — the config values
+    # are seed guesses and run narrow (NBA margin SD is ~13, config said 11.6),
+    # which made every spread/total probability overconfident.
+    cal_path = util.abspath(os.path.join(cfg["paths"]["models_dir"], "calibration.json"))
+    cal = (util.read_json(cal_path) if os.path.exists(cal_path) else {}).get(league, {})
+    if cal.get("n", 0) >= 100:
+        for k in ("sigma_margin", "sigma_total", "home_edge_pts"):
+            if cal.get(k):
+                aggregates[k] = round(float(cal[k]), 2)
+        aggregates["calibrated"] = True
     return out, aggregates
 
 
