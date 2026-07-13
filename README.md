@@ -1,9 +1,9 @@
 # Basketball-Modelling
 
-Predictive models for **NBA**, **NBL** and **WNBA** basketball — match win probabilities, the full
-betting market book (spreads, totals, team totals, quarters, halves, margins, double results) and
-player props (points, rebounds, assists, threes, combos, double/triple-doubles) — published as a
-static dashboard.
+Predictive models for **NBA**, **NBL**, **WNBA** and the **NBA Summer League** — match win
+probabilities, the full betting market book (spreads, totals, team totals, quarters, halves, margins,
+double results) and player props (points, rebounds, assists, threes, combos, double/triple-doubles) —
+published as a static dashboard. (Summer League prices team markets only; it has no player-prop feed.)
 
 Part of the **0 Series** network of sports models.
 
@@ -35,6 +35,9 @@ consistent with it.
 - **WNBA** — ESPN's public JSON API (anonymous, cloud-reachable; runs in CI), the same source as
   the NBA, with single calendar-year seasons. (stats.wnba.com was the original plan but it's
   Akamai-walled/IP-throttled for cloud IPs, so the WNBA uses ESPN to avoid that.)
+- **NBA Summer League** — ESPN's public `nba-summer` **scoreboard** only (it has no season-stat or
+  box-score endpoints). Teams, pace/scoring and results are aggregated from the scoreboard over each
+  July window; team markets only.
 
 For research and entertainment only — not betting advice.
 
@@ -44,9 +47,16 @@ Leagues are configured in `config.yaml` under the `leagues:` list, each with its
 `source`, game length, pace/scoring baselines, season length, playoff size). The model code is
 shared and reads the active league's block:
 
-- `nba`  — `source: espn`,    82-game season.
-- `nbl`  — `source: rosetta`, 28-game season.
-- `wnba` — `source: espn`,    44-game season (single calendar-year seasons).
+- `nba`       — `source: espn`,     82-game season.
+- `nbl`       — `source: rosetta`,  28-game season.
+- `wnba`      — `source: espn`,     44-game season (single calendar-year seasons).
+- `nbasummer` — `source: espn_sb`,  the July Summer League (Las Vegas + California Classic + Salt
+  Lake City). ESPN exposes only the date-ranged **scoreboard** for it (no season-stat, box-score or
+  by-athlete endpoints), so `espn_sb` aggregates teams, per-team pace/scoring and final scores from
+  the scoreboard over each season's July window. Team markets only — no player props, no title
+  futures (`futures: false`), no fantasy. Team ids are the real NBA franchise ids; split summer
+  entities (California Classic "Gold/Blue" squads, per-sub-event ids) are canonicalised into their
+  parent franchise.
 
 ## Local run
 

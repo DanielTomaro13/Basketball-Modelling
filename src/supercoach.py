@@ -21,7 +21,7 @@ _BASE = "https://www.supercoach.com.au/{year}/api/{sport}/classic/v1/{path}"
 _HDRS = {"Accept": "application/json"}
 
 # Leagues with no SuperCoach competition — emit an empty-but-valid card file.
-NO_FEED = {"wnba"}
+NO_FEED = {"wnba", "nbasummer"}
 
 
 def _get(year, sport: str, path: str):

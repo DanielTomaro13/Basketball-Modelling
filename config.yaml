@@ -1,12 +1,12 @@
 # ===========================================================================
-# Basketball-Modelling configuration  (NBA + NBL + WNBA)
+# Basketball-Modelling configuration  (NBA + NBL + WNBA + NBA Summer League)
 # ===========================================================================
 # Single source of truth for the pipeline. Loaded once by util.load_config and
-# threaded through every stage. One repo, three leagues — each league has its own
+# threaded through every stage. One repo, four leagues — each league has its own
 # block (data source, game length, pace/scoring baselines); the model code is
 # shared and reads the active league's block.
 
-leagues: [nba, nbl, wnba]         # build order: NBA, then NBL, then WNBA
+leagues: [nba, nbl, wnba, nbasummer]   # build order: NBA, NBL, WNBA, Summer League
 
 # --------------------------------------------------------------------------- #
 # NBA — sourced from the ESPN hidden API (no auth, cloud-reachable => runs on
@@ -88,6 +88,49 @@ wnba:
   supercoach_year: 2025
   games_per_season: 44            # regular-season games (futures win totals)
   playoff_teams: 8                # teams in the post-season bracket
+
+# --------------------------------------------------------------------------- #
+# NBA Summer League — the July showcase (Las Vegas + California Classic + Salt
+# Lake City), sourced from ESPN's public "nba-summer" feed. Unlike the NBA/WNBA
+# ESPN leagues, Summer League has NO season-stat, boxscore or by-athlete
+# endpoints — ESPN exposes only the date-ranged SCOREBOARD. So it uses a distinct
+# source, "espn_sb": teams, per-team pace/scoring and final scores are all
+# aggregated from the scoreboard over each season's July window. Consequences:
+#   * team markets (win prob, spread, total, team totals, quarters, halves) all
+#     price normally off results + a scoreboard-derived pace proxy;
+#   * NO player props — the boxscore feed doesn't exist, so players-nbasummer.json
+#     is written empty and props/cards/leaders come out empty-but-valid;
+#   * NO title futures — a ~5-game neutral-site event isn't a season (futures: false);
+#   * neutral site => a near-zero home edge.
+# 10-minute quarters (40-minute game). Real NBA franchises + team ids, so the site
+# reuses the existing NBA club colours.
+# --------------------------------------------------------------------------- #
+nbasummer:
+  source: "espn_sb"               # scoreboard-only ESPN ingest (no season-stat/boxscore feeds)
+  espn_site: "https://site.api.espn.com/apis/site/v2/sports/basketball/nba-summer"
+  season: 2026                    # Summer League year (calendar year)
+  history_seasons: [2024, 2025, 2026]
+  season_type: 2                  # ESPN scoreboard seasontype (unused by the date-window scan)
+  # Summer League is a July event, not a season span; the scoreboard is scanned by
+  # date window per season (inclusive, YYYYMMDD). Wide-but-cheap July windows.
+  date_windows:
+    2024: ["20240701", "20240731"]
+    2025: ["20250701", "20250731"]
+    2026: ["20260701", "20260731"]
+  quarters: 4
+  quarter_minutes: 10             # Summer League plays 10-minute quarters (40-min game)
+  league_pace: 96.0
+  league_ortg: 100.0
+  league_ppg: 84.0
+  home_edge_pts: 0.5              # neutral-site tournament — negligible home edge
+  sigma_margin: 13.5             # summer ball runs high-variance
+  sigma_total: 18.0
+  ot_push: 0.05
+  prop_minutes_default: 22.0
+  supercoach_year: 2025           # unused (no SuperCoach Summer League comp)
+  games_per_season: 5             # pool-play games per team (not a title chase)
+  playoff_teams: 8
+  futures: false                  # no season-long win totals / title market for a July event
 
 # --------------------------------------------------------------------------- #
 # Team / player profiles (shared) — shrink small samples toward the league mean

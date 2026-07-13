@@ -168,6 +168,161 @@ def _espn_players(cfg: dict, league: str, season: int, abbr2id: dict) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+# ESPN scoreboard (NBA Summer League — source "espn_sb")
+# Summer League has no /teams, core team-statistics, by-athlete or boxscore
+# endpoints — ESPN exposes only the date-ranged SCOREBOARD. So teams, per-team
+# pace/scoring and final scores are all aggregated from the scoreboard scanned
+# over each season's July window. There is no player feed, so props are omitted
+# (players-{league}.json is written empty). Game ids are real ESPN event ids and
+# team ids are the real NBA franchise ids, so nothing else in the pipeline needs
+# to special-case this league.
+# --------------------------------------------------------------------------- #
+def _sb_window_dates(cfg: dict, league: str, season) -> list[str]:
+    """YYYYMMDD dates to scan for one Summer League season (inclusive window)."""
+    import datetime
+    windows = cfg[league].get("date_windows") or {}
+    win = windows.get(str(season)) or windows.get(season)
+    if win and len(win) == 2:
+        start = datetime.datetime.strptime(str(win[0]), "%Y%m%d").date()
+        end = datetime.datetime.strptime(str(win[1]), "%Y%m%d").date()
+    else:                                   # default: the whole of July that year
+        start = datetime.date(int(season), 7, 1)
+        end = datetime.date(int(season), 7, 31)
+    span = (end - start).days
+    return [(start + datetime.timedelta(days=d)).strftime("%Y%m%d") for d in range(span + 1)]
+
+
+def _sb_score(c: dict) -> float:
+    """Competitor score — a bare string on the scoreboard, a {value} dict elsewhere."""
+    s = c.get("score")
+    return util.num(s.get("value")) if isinstance(s, dict) else util.num(s)
+
+
+def _sb_stats(c: dict) -> dict:
+    """Flatten a scoreboard competitor's team statistics to {name: number}."""
+    return {s.get("name"): util.num(s.get("displayValue"))
+            for s in (c.get("statistics") or []) if s.get("name")}
+
+
+def _espn_sb_events(cfg: dict, league: str, season) -> list[dict]:
+    """Every scoreboard event for one Summer League season, deduped by game id."""
+    site = cfg[league]["espn_site"]
+    seen: dict[str, dict] = {}
+    for ymd in _sb_window_dates(cfg, league, season):
+        data = util.http_get_json(f"{site}/scoreboard?dates={ymd}", pause=0.05)
+        for ev in (data or {}).get("events", []):
+            gid = str(ev.get("id") or "")
+            if gid and gid not in seen:
+                seen[gid] = ev
+    return list(seen.values())
+
+
+def _sb_canonical(events: list[dict]) -> tuple[dict, dict]:
+    """(raw id -> canonical id, canonical id -> franchise name).
+
+    A franchise that plays an early sub-event (California Classic / Salt Lake City)
+    under a 6-digit "summer" id and Las Vegas under its real NBA id would otherwise
+    split into two teams; ESPN also mints split squads ("Warriors Gold"/"Blue").
+    Collapse by abbreviation to the smallest id — real franchise ids are 1–2 digits,
+    the summer entities are 6 — so each franchise's games merge into one profile.
+    """
+    ids_by_abbr: dict[str, set] = {}
+    name_by_id: dict[str, str] = {}
+    for ev in events:
+        for c in (ev.get("competitions") or [{}])[0].get("competitors", []):
+            tm = c.get("team", {})
+            tid, abbr = str(tm.get("id") or ""), (tm.get("abbreviation") or "").upper()
+            if not tid or abbr == "TBD":
+                continue
+            ids_by_abbr.setdefault(abbr, set()).add(tid)
+            name_by_id[tid] = tm.get("displayName", abbr)
+    canon, cname = {}, {}
+    for abbr, ids in ids_by_abbr.items():
+        cid = min(ids, key=lambda x: (len(x), int(x) if x.isdigit() else 10 ** 12))
+        for tid in ids:
+            canon[tid] = cid
+        cname[cid] = name_by_id.get(cid, abbr)
+    return canon, cname
+
+
+def sb_team_index(cfg: dict, league: str) -> dict:
+    """abbr (upper) -> canonical team id, from the built teams file (for fixtures)."""
+    path = _raw_path(f"teams-{league}.json")
+    teams = util.read_json(path) if os.path.exists(path) else {}
+    return {(v.get("abbr") or "").upper(): tid for tid, v in teams.items()}
+
+
+def _espn_sb_collect(cfg: dict, league: str, season) -> tuple[dict, dict, list[dict]]:
+    """Aggregate the scoreboard into (teams, team-stats, final-score rows).
+
+    * teams     -> {id: {id, abbr, name}} (real NBA franchise ids; TBD bracket
+      placeholders are dropped)
+    * teamstats -> {id: {paceFactor:{value}, avgPoints:{value}, ...}} per-game
+      averages over played games; pace is a FGA + 0.44*FTA possessions proxy
+      (OREB/TOV aren't exposed on the scoreboard — it's anchored as a ratio to the
+      league pace mean in features, so the missing terms wash out)
+    * rows      -> final-score history for Elo + the backtest
+    """
+    events = _espn_sb_events(cfg, league, season)
+    canon, cname = _sb_canonical(events)
+    teams: dict[str, dict] = {}
+    agg: dict[str, dict] = {}
+    rows: list[dict] = []
+    for ev in events:
+        comp = (ev.get("competitions") or [{}])[0]
+        completed = comp.get("status", {}).get("type", {}).get("completed")
+        sides: dict[str, tuple] = {}
+        for c in comp.get("competitors", []):
+            tm = c.get("team", {})
+            tid, abbr = str(tm.get("id") or ""), (tm.get("abbreviation") or "").upper()
+            if not tid or abbr == "TBD":
+                continue
+            cid = canon.get(tid, tid)
+            teams.setdefault(cid, {"id": cid, "abbr": abbr, "name": cname.get(cid, abbr)})
+            sides[c.get("homeAway")] = (c, cid, abbr)
+        home, away = sides.get("home"), sides.get("away")
+        if not completed or not home or not away:
+            continue
+        if home[1] == away[1]:               # split-squad artifact after merge (Gold vs Blue) — not a real game
+            continue
+        hp, ap = _sb_score(home[0]), _sb_score(away[0])
+        if hp <= 0 or ap <= 0:
+            continue
+        for c, tid, _abbr in (home, away):
+            st = _sb_stats(c)
+            fga, fta = st.get("fieldGoalsAttempted", 0.0), st.get("freeThrowsAttempted", 0.0)
+            poss = fga + 0.44 * fta
+            if poss <= 0:
+                continue
+            a = agg.setdefault(tid, {k: 0.0 for k in
+                                     ("g", "poss", "pts", "ast", "fga", "fta", "fg3a", "fg3m", "reb")})
+            a["g"] += 1
+            a["poss"] += poss
+            a["pts"] += st.get("points", 0.0)
+            a["ast"] += st.get("assists", 0.0)
+            a["fga"] += fga
+            a["fta"] += fta
+            a["fg3a"] += st.get("threePointFieldGoalsAttempted", 0.0)
+            a["fg3m"] += st.get("threePointFieldGoalsMade", 0.0)
+            a["reb"] += st.get("rebounds", 0.0)
+        rows.append({"gameId": str(ev.get("id")), "date": (ev.get("date") or "")[:10],
+                     "season": season, "homeId": home[1], "awayId": away[1],
+                     "homeAbbr": home[2], "awayAbbr": away[2], "homePts": hp, "awayPts": ap})
+    tstats: dict[str, dict] = {}
+    for tid, a in agg.items():
+        g = a["g"] or 1
+        tstats[tid] = {"paceFactor": {"value": round(a["poss"] / g, 2)},
+                       "avgPoints": {"value": round(a["pts"] / g, 1)},
+                       "avgAssists": {"value": round(a["ast"] / g, 1)},
+                       "fieldGoalsAttempted": {"per_game": round(a["fga"] / g, 1)},
+                       "freeThrowsAttempted": {"per_game": round(a["fta"] / g, 1)},
+                       "threePointFieldGoalsAttempted": {"per_game": round(a["fg3a"] / g, 1)},
+                       "threePointFieldGoalsMade": {"per_game": round(a["fg3m"] / g, 1)}}
+    rows.sort(key=lambda r: r["date"])
+    return teams, tstats, rows
+
+
+# --------------------------------------------------------------------------- #
 # Rosetta (NBL)
 # --------------------------------------------------------------------------- #
 def _rosetta_get(cfg: dict, league: str, route: str) -> list:
@@ -437,6 +592,16 @@ def download_core(cfg: dict) -> None:
             util.write_json(_raw_path(f"players-{league}.json"), players)
             util.log(f"ingest[{league}]: {len(teams)} teams, {len(tstats)} team-stat lines, "
                      f"{len(players)} players")
+        elif src == "espn_sb":
+            teams, tstats, _rows = _espn_sb_collect(cfg, league, season)
+            if not teams:
+                util.log(f"ingest[{league}]: no scoreboard games returned — skipping")
+                continue
+            util.write_json(_raw_path(f"teams-{league}.json"), teams)
+            util.write_json(_raw_path(f"teamstats-{league}.json"), tstats)
+            util.write_json(_raw_path(f"players-{league}.json"), {})  # no Summer League boxscore feed → no props
+            util.log(f"ingest[{league}]: {len(teams)} teams, {len(tstats)} team-stat lines, "
+                     f"0 players (no Summer League boxscore feed)")
         elif src == "rosetta":
             teams, tstats = _rosetta_team_stats(cfg, league, season)
             players = _rosetta_players(cfg, league, season)
@@ -481,6 +646,8 @@ def derive_results(cfg: dict) -> None:
         for season in cfg[league]["history_seasons"]:
             if src == "espn":
                 rows = _espn_results(cfg, league, season, teams)
+            elif src == "espn_sb":
+                rows = _espn_sb_collect(cfg, league, season)[2]
             elif src == "rosetta":
                 rows = _rosetta_results(cfg, league, season)
             elif src == "stats":

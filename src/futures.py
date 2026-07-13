@@ -112,6 +112,8 @@ def build(cfg: dict) -> dict:
         if os.path.exists(util.abspath(os.path.join(models, "profiles.json"))) else {}
     out = {}
     for league in cfg["leagues"]:
+        if not cfg[league].get("futures", True):   # short events (Summer League) have no title/win-total market
+            continue
         elo = elos.get(league)
         teams_meta = profiles.get(league, {}).get("teams", {})
         if not elo or not teams_meta:

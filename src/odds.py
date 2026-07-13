@@ -175,6 +175,8 @@ _COMP_NAMES = {"nba": ("nba",), "nbl": ("nbl",), "wnba": ("wnba",)}
 
 def _league_of(comp_name):
     low = (comp_name or "").lower()
+    if "summer" in low:                                # NBA Summer League — must precede the "nba" check
+        return "nbasummer"
     if "wnba" in low:                                  # not the NBA
         return "wnba"
     if "nba" in low:

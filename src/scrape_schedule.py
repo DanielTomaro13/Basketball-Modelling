@@ -118,6 +118,20 @@ def scrape(cfg: dict) -> list[dict]:
         try:
             if src == "espn":
                 got = _espn_upcoming(cfg, league)
+            elif src == "espn_sb":
+                # same scoreboard scraper; drop TBD bracket placeholders, and canonicalize
+                # team ids by abbreviation so a fixture joins the merged franchise profile
+                # (Summer League splits some franchises across ids — see ingest._sb_canonical)
+                from . import ingest
+                idx = ingest.sb_team_index(cfg, league)
+                got = []
+                for r in _espn_upcoming(cfg, league):
+                    ha, aa = r["homeAbbr"].upper(), r["awayAbbr"].upper()
+                    if "TBD" in (ha, aa):
+                        continue
+                    r["homeId"] = idx.get(ha, r["homeId"])
+                    r["awayId"] = idx.get(aa, r["awayId"])
+                    got.append(r)
             elif src == "rosetta":
                 got = _rosetta_upcoming(cfg, league)
             elif src == "stats":
