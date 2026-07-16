@@ -7,27 +7,19 @@ nba,,Minnesota Timberwolves,Atlanta Hawks,0.5517,0.4483,1.81,2.23,121.9,119.9,24
 nba,,Portland Trail Blazers,LA Clippers,0.5466,0.4534,1.83,2.21,112.7,111.0,223.7,True
 nba,,Charlotte Hornets,Denver Nuggets,0.5329,0.4671,1.88,2.14,114.0,112.8,226.9,True
 nba,,Los Angeles Lakers,New York Knicks,0.4988,0.5012,2.0,2.0,109.3,109.3,218.6,True
-nbasummer,2026-07-15,Charlotte Hornets,Milwaukee Bucks,0.6917,0.3083,1.45,3.24,83.8,77.0,160.8,False
-nbasummer,2026-07-15,Cleveland Cavaliers,New Orleans Pelicans,0.6002,0.3998,1.67,2.5,104.2,100.8,204.9,False
-nbasummer,2026-07-15,Philadelphia 76ers,Orlando Magic,0.5622,0.4378,1.78,2.28,90.6,88.5,179.1,False
-nbasummer,2026-07-15,Detroit Pistons,Phoenix Suns,0.535,0.465,1.87,2.15,85.9,84.7,170.7,False
-nbasummer,2026-07-15,Minnesota Timberwolves,Indiana Pacers,0.5241,0.4759,1.91,2.1,93.0,92.2,185.2,False
-nbasummer,2026-07-16,Chicago Bulls,Los Angeles Lakers,0.5462,0.4538,1.83,2.2,83.7,82.1,165.8,False
-nbasummer,2026-07-16,LA Clippers,Washington Wizards,0.5433,0.4567,1.84,2.19,87.1,85.6,172.6,False
-nbasummer,2026-07-16,San Antonio Spurs,Utah Jazz,0.4676,0.5324,2.14,1.88,83.9,85.0,168.9,False
-nbasummer,2026-07-16,New York Knicks,Golden State Warriors,0.4719,0.5281,2.12,1.89,79.1,80.0,159.1,False
-nbasummer,2026-07-16,Oklahoma City Thunder,Dallas Mavericks,0.4746,0.5254,2.11,1.9,77.5,78.3,155.8,False
-nbasummer,2026-07-16,Sacramento Kings,Boston Celtics,0.5206,0.4794,1.92,2.09,94.4,93.7,188.1,False
-nbasummer,2026-07-16,Houston Rockets,Brooklyn Nets,0.4818,0.5182,2.08,1.93,88.7,89.3,178.0,False
-nbasummer,2026-07-17,Atlanta Hawks,Memphis Grizzlies,0.6186,0.3814,1.62,2.62,98.2,94.1,192.2,False
-nbasummer,2026-07-17,Charlotte Hornets,Sacramento Kings,0.5664,0.4336,1.77,2.31,80.5,78.3,158.8,False
-nbasummer,2026-07-17,Denver Nuggets,Portland Trail Blazers,0.5459,0.4541,1.83,2.2,109.2,107.6,216.8,False
-nbasummer,2026-07-17,Cleveland Cavaliers,Chicago Bulls,0.524,0.476,1.91,2.1,93.4,92.6,186.0,False
-nbasummer,2026-07-17,Miami Heat,Toronto Raptors,0.5127,0.4873,1.95,2.05,91.9,91.4,183.3,False
-nbasummer,2026-07-18,LA Clippers,Minnesota Timberwolves,0.6045,0.3955,1.65,2.53,91.1,87.5,178.5,False
-nbasummer,2026-07-18,Utah Jazz,Portland Trail Blazers,0.5993,0.4007,1.67,2.5,99.5,96.1,195.6,False
-nbasummer,2026-07-18,Miami Heat,Detroit Pistons,0.5852,0.4148,1.71,2.41,91.7,88.8,180.5,False
-nbasummer,2026-07-18,New York Knicks,Dallas Mavericks,0.5198,0.4802,1.92,2.08,73.6,72.9,146.5,False
+nbasummer,2026-07-16,New York Knicks,Golden State Warriors,0.4647,0.5353,2.15,1.87,78.5,79.6,158.1,False
+nbasummer,2026-07-16,Houston Rockets,Brooklyn Nets,0.465,0.535,2.15,1.87,88.1,89.3,177.4,False
+nbasummer,2026-07-16,Oklahoma City Thunder,Dallas Mavericks,0.4724,0.5276,2.12,1.9,77.3,78.2,155.5,False
+nbasummer,2026-07-16,Chicago Bulls,Los Angeles Lakers,0.5243,0.4757,1.91,2.1,82.8,81.9,164.7,False
+nbasummer,2026-07-17,Atlanta Hawks,Memphis Grizzlies,0.6218,0.3782,1.61,2.64,97.9,93.7,191.7,False
+nbasummer,2026-07-17,Miami Heat,Toronto Raptors,0.539,0.461,1.86,2.17,92.2,90.8,183.0,False
+nbasummer,2026-07-17,Denver Nuggets,Portland Trail Blazers,0.5379,0.4621,1.86,2.16,107.5,106.2,213.7,False
+nbasummer,2026-07-17,Cleveland Cavaliers,Chicago Bulls,0.5303,0.4697,1.89,2.13,90.2,89.1,179.3,False
+nbasummer,2026-07-17,Charlotte Hornets,Sacramento Kings,0.5262,0.4738,1.9,2.11,85.0,84.1,169.2,False
+nbasummer,2026-07-18,Miami Heat,Detroit Pistons,0.6228,0.3772,1.61,2.65,95.0,90.7,185.7,False
+nbasummer,2026-07-18,LA Clippers,Minnesota Timberwolves,0.6049,0.3951,1.65,2.53,97.0,93.4,190.5,False
+nbasummer,2026-07-18,Utah Jazz,Portland Trail Blazers,0.5583,0.4417,1.79,2.26,98.5,96.6,195.1,False
+nbasummer,2026-07-18,New York Knicks,Dallas Mavericks,0.5216,0.4784,1.92,2.09,73.3,72.5,145.8,False
 nbl,2026-11-14,Perth Wildcats,Illawarra Hawks,0.6463,0.3537,1.55,2.83,97.2,91.6,188.9,False
 nbl,2026-11-15,Sydney Kings,New Zealand Breakers,0.8346,0.1654,1.2,6.05,106.4,91.8,198.2,False
 nbl,2026-11-15,Brisbane Bullets,Tasmania JackJumpers,0.3004,0.6996,3.33,1.43,78.2,86.1,164.3,False
@@ -128,16 +120,18 @@ nbl,2027-02-13,Sydney Kings,Tasmania JackJumpers,0.7884,0.2116,1.27,4.73,94.5,82
 nbl,2027-02-13,Melbourne United,Illawarra Hawks,0.5389,0.4611,1.86,2.17,98.2,96.8,195.0,False
 nbl,2027-02-14,South East Melbourne Phoenix,Brisbane Bullets,0.8665,0.1335,1.15,7.49,107.3,90.7,198.0,False
 nbl,2027-02-14,Adelaide 36ers,New Zealand Breakers,0.6802,0.3198,1.47,3.13,95.5,88.4,183.9,False
-wnba,2026-07-16,Washington Mystics,Portland Fire,0.6429,0.3571,1.56,2.8,90.2,85.2,175.4,False
-wnba,2026-07-16,Indiana Fever,Golden State Valkyries,0.5403,0.4597,1.85,2.18,86.5,85.1,171.5,False
-wnba,2026-07-17,Indiana Fever,Seattle Storm,0.7828,0.2172,1.28,4.6,99.0,88.2,187.2,False
-wnba,2026-07-17,Dallas Wings,New York Liberty,0.5986,0.4014,1.67,2.49,95.1,91.7,186.8,False
+wnba,2026-07-16,Washington Mystics,Portland Fire,0.6428,0.3572,1.56,2.8,90.2,85.2,175.4,False
+wnba,2026-07-17,Indiana Fever,Seattle Storm,0.7717,0.2283,1.3,4.38,98.7,88.4,187.1,False
+wnba,2026-07-17,Dallas Wings,New York Liberty,0.5984,0.4016,1.67,2.49,95.1,91.7,186.8,False
 wnba,2026-07-17,Toronto Tempo,Atlanta Dream,0.4077,0.5923,2.45,1.69,86.4,89.6,176.0,False
-wnba,2026-07-17,Chicago Sky,Los Angeles Sparks,0.5572,0.4428,1.79,2.26,92.3,90.3,182.6,False
-wnba,2026-07-18,Phoenix Mercury,Connecticut Sun,0.6788,0.3212,1.47,3.11,84.0,77.6,161.5,False
-wnba,2026-07-19,Minnesota Lynx,Portland Fire,0.8334,0.1666,1.2,6.0,97.6,84.2,181.8,False
-wnba,2026-07-19,Atlanta Dream,Chicago Sky,0.7467,0.2533,1.34,3.95,97.0,87.9,184.9,False
-wnba,2026-07-19,Golden State Valkyries,Washington Mystics,0.7407,0.2593,1.35,3.86,78.1,69.2,147.3,False
-wnba,2026-07-19,Dallas Wings,Los Angeles Sparks,0.7298,0.2702,1.37,3.7,96.3,87.9,184.2,False
-wnba,2026-07-19,Phoenix Mercury,Connecticut Sun,0.6788,0.3212,1.47,3.11,84.0,77.6,161.5,False
-wnba,2026-07-19,Indiana Fever,New York Liberty,0.6176,0.3824,1.62,2.62,101.3,97.1,198.4,False
+wnba,2026-07-17,Chicago Sky,Los Angeles Sparks,0.5577,0.4423,1.79,2.26,92.3,90.3,182.6,False
+wnba,2026-07-18,Phoenix Mercury,Connecticut Sun,0.6785,0.3215,1.47,3.11,84.0,77.6,161.5,False
+wnba,2026-07-19,Minnesota Lynx,Portland Fire,0.8338,0.1662,1.2,6.02,97.6,84.2,181.8,False
+wnba,2026-07-19,Golden State Valkyries,Washington Mystics,0.7534,0.2466,1.33,4.05,78.3,68.8,147.1,False
+wnba,2026-07-19,Atlanta Dream,Chicago Sky,0.7468,0.2532,1.34,3.95,97.0,87.9,184.9,False
+wnba,2026-07-19,Dallas Wings,Los Angeles Sparks,0.7303,0.2697,1.37,3.71,96.3,87.9,184.2,False
+wnba,2026-07-19,Phoenix Mercury,Connecticut Sun,0.6785,0.3215,1.47,3.11,84.0,77.6,161.5,False
+wnba,2026-07-19,Indiana Fever,New York Liberty,0.6022,0.3978,1.66,2.51,101.0,97.4,198.3,False
+wnba,2026-07-21,Golden State Valkyries,Washington Mystics,0.7534,0.2466,1.33,4.05,78.3,68.8,147.1,False
+wnba,2026-07-21,Seattle Storm,Minnesota Lynx,0.273,0.727,3.66,1.38,79.6,87.9,167.5,False
+wnba,2026-07-21,Toronto Tempo,Las Vegas Aces,0.3983,0.6017,2.51,1.66,77.6,81.2,158.8,False
