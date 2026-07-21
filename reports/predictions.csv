@@ -15,113 +15,109 @@ nbasummer,,Boston Celtics,LA Clippers,0.524,0.476,1.91,2.1,95.2,94.4,189.5,True
 nbasummer,,Los Angeles Lakers,Brooklyn Nets,0.5158,0.4842,1.94,2.07,85.6,85.1,170.7,True
 nbasummer,,Golden State Warriors,Memphis Grizzlies,0.5062,0.4938,1.98,2.03,90.2,90.0,180.2,True
 nbasummer,,Minnesota Timberwolves,Toronto Raptors,0.495,0.505,2.02,1.98,100.4,100.5,200.9,True
-nbl,2026-11-14,Perth Wildcats,Illawarra Hawks,0.6463,0.3537,1.55,2.83,97.2,91.6,188.9,False
-nbl,2026-11-15,Sydney Kings,New Zealand Breakers,0.8346,0.1654,1.2,6.05,106.4,91.8,198.2,False
-nbl,2026-11-15,Brisbane Bullets,Tasmania JackJumpers,0.3004,0.6996,3.33,1.43,78.2,86.1,164.3,False
-nbl,2026-11-18,New Zealand Breakers,South East Melbourne Phoenix,0.358,0.642,2.79,1.56,102.3,107.8,210.1,False
-nbl,2026-11-19,Illawarra Hawks,Adelaide 36ers,0.4941,0.5059,2.02,1.98,95.5,95.7,191.2,False
-nbl,2026-11-20,Cairns Taipans,Perth Wildcats,0.2728,0.7272,3.67,1.38,81.2,90.2,171.4,False
-nbl,2026-11-21,Melbourne United,New Zealand Breakers,0.6199,0.3801,1.61,2.63,96.0,91.5,187.5,False
-nbl,2026-11-21,Tasmania JackJumpers,Illawarra Hawks,0.5314,0.4686,1.88,2.13,91.7,90.5,182.2,False
-nbl,2026-11-22,Brisbane Bullets,Sydney Kings,0.1108,0.8892,9.03,1.12,84.1,102.5,186.6,False
-nbl,2026-11-22,South East Melbourne Phoenix,Cairns Taipans,0.8145,0.1855,1.23,5.39,106.0,92.6,198.6,False
-nbl,2026-12-02,Adelaide 36ers,South East Melbourne Phoenix,0.4978,0.5022,2.01,1.99,98.4,98.5,196.8,False
-nbl,2026-12-03,Brisbane Bullets,Perth Wildcats,0.2074,0.7926,4.82,1.26,79.1,91.3,170.4,False
-nbl,2026-12-04,Illawarra Hawks,Sydney Kings,0.2941,0.7059,3.4,1.42,98.9,107.0,206.0,False
-nbl,2026-12-04,New Zealand Breakers,Melbourne United,0.4794,0.5206,2.09,1.92,93.4,94.1,187.5,False
-nbl,2026-12-05,Cairns Taipans,South East Melbourne Phoenix,0.2565,0.7435,3.9,1.35,94.4,104.2,198.6,False
-nbl,2026-12-05,Adelaide 36ers,Tasmania JackJumpers,0.6203,0.3797,1.61,2.63,84.1,79.6,163.7,False
-nbl,2026-12-06,Melbourne United,Brisbane Bullets,0.7884,0.2116,1.27,4.73,94.0,82.0,176.0,False
-nbl,2026-12-06,Sydney Kings,Perth Wildcats,0.7006,0.2994,1.43,3.34,95.6,87.7,183.4,False
-nbl,2026-12-09,Cairns Taipans,Adelaide 36ers,0.3088,0.6912,3.24,1.45,83.1,90.5,173.6,False
-nbl,2026-12-10,Illawarra Hawks,Tasmania JackJumpers,0.5691,0.4309,1.76,2.32,92.4,89.8,182.2,False
-nbl,2026-12-11,New Zealand Breakers,Sydney Kings,0.2308,0.7692,4.33,1.3,93.6,104.6,198.2,False
-nbl,2026-12-12,Cairns Taipans,Brisbane Bullets,0.6307,0.3693,1.59,2.71,89.7,84.7,174.4,False
-nbl,2026-12-12,Melbourne United,Tasmania JackJumpers,0.5578,0.4422,1.79,2.26,84.4,82.3,166.7,False
-nbl,2026-12-13,Adelaide 36ers,Sydney Kings,0.351,0.649,2.85,1.54,89.9,95.7,185.6,False
-nbl,2026-12-13,South East Melbourne Phoenix,Perth Wildcats,0.5605,0.4395,1.78,2.28,98.4,96.1,194.5,False
-nbl,2026-12-16,Perth Wildcats,Melbourne United,0.6554,0.3446,1.53,2.9,89.5,83.5,172.9,False
-nbl,2026-12-17,Sydney Kings,Cairns Taipans,0.891,0.109,1.12,9.17,102.9,84.4,187.3,False
-nbl,2026-12-18,New Zealand Breakers,Tasmania JackJumpers,0.4877,0.5123,2.05,1.95,87.4,87.8,175.2,False
-nbl,2026-12-19,Adelaide 36ers,Brisbane Bullets,0.8285,0.1715,1.21,5.83,93.5,79.3,172.7,False
-nbl,2026-12-19,South East Melbourne Phoenix,Sydney Kings,0.3956,0.6044,2.53,1.65,103.9,107.9,211.8,False
-nbl,2026-12-20,Cairns Taipans,Perth Wildcats,0.2728,0.7272,3.67,1.38,81.2,90.2,171.4,False
-nbl,2026-12-20,Illawarra Hawks,Melbourne United,0.5629,0.4371,1.78,2.29,98.7,96.3,195.0,False
-nbl,2026-12-21,Tasmania JackJumpers,Adelaide 36ers,0.477,0.523,2.1,1.91,81.4,82.3,163.7,False
-nbl,2026-12-22,New Zealand Breakers,Brisbane Bullets,0.7364,0.2636,1.36,3.79,97.1,87.7,184.8,False
-nbl,2026-12-23,Melbourne United,Cairns Taipans,0.7223,0.2777,1.38,3.6,92.9,84.0,176.9,False
-nbl,2026-12-24,Adelaide 36ers,Perth Wildcats,0.5073,0.4927,1.97,2.03,85.0,84.7,169.8,False
-nbl,2026-12-25,Sydney Kings,Illawarra Hawks,0.7842,0.2158,1.28,4.63,108.9,97.1,206.0,False
-nbl,2026-12-26,Tasmania JackJumpers,South East Melbourne Phoenix,0.4233,0.5767,2.36,1.73,92.4,95.3,187.7,False
-nbl,2026-12-27,Illawarra Hawks,New Zealand Breakers,0.6322,0.3678,1.58,2.72,104.6,99.6,204.2,False
-nbl,2026-12-27,Brisbane Bullets,Cairns Taipans,0.467,0.533,2.14,1.88,86.6,87.8,174.4,False
-nbl,2026-12-29,Sydney Kings,Melbourne United,0.7897,0.2103,1.27,4.76,100.7,88.6,189.3,False
-nbl,2026-12-30,Brisbane Bullets,Adelaide 36ers,0.238,0.762,4.2,1.31,81.0,91.7,172.7,False
-nbl,2026-12-31,Cairns Taipans,New Zealand Breakers,0.4338,0.5662,2.31,1.77,91.6,94.1,185.6,False
-nbl,2026-12-31,Illawarra Hawks,South East Melbourne Phoenix,0.4379,0.5621,2.28,1.78,107.9,110.3,218.2,False
-nbl,2027-01-01,Tasmania JackJumpers,Perth Wildcats,0.4347,0.5653,2.3,1.77,79.5,82.0,161.5,False
-nbl,2027-01-02,Illawarra Hawks,Cairns Taipans,0.7345,0.2655,1.36,3.77,101.2,91.8,193.0,False
-nbl,2027-01-02,Adelaide 36ers,South East Melbourne Phoenix,0.4978,0.5022,2.01,1.99,98.4,98.5,196.8,False
-nbl,2027-01-03,Brisbane Bullets,Melbourne United,0.2882,0.7118,3.47,1.4,83.8,92.2,176.0,False
-nbl,2027-01-03,New Zealand Breakers,Perth Wildcats,0.3721,0.6279,2.69,1.59,88.4,93.3,181.6,False
-nbl,2027-01-04,Sydney Kings,Tasmania JackJumpers,0.7884,0.2116,1.27,4.73,94.5,82.5,176.9,False
-nbl,2027-01-06,South East Melbourne Phoenix,Tasmania JackJumpers,0.6715,0.3285,1.49,3.04,97.2,90.5,187.7,False
-nbl,2027-01-06,Illawarra Hawks,Perth Wildcats,0.4511,0.5489,2.22,1.82,93.5,95.4,188.9,False
-nbl,2027-01-07,Melbourne United,Adelaide 36ers,0.4834,0.5166,2.07,1.94,87.3,87.9,175.3,False
-nbl,2027-01-08,Brisbane Bullets,Sydney Kings,0.1108,0.8892,9.03,1.12,84.1,102.5,186.6,False
-nbl,2027-01-08,New Zealand Breakers,Illawarra Hawks,0.467,0.533,2.14,1.88,101.5,102.7,204.2,False
-nbl,2027-01-09,Cairns Taipans,Tasmania JackJumpers,0.3776,0.6224,2.65,1.61,80.3,85.0,165.3,False
-nbl,2027-01-09,Adelaide 36ers,Perth Wildcats,0.5073,0.4927,1.97,2.03,85.0,84.7,169.8,False
-nbl,2027-01-10,Sydney Kings,Melbourne United,0.7897,0.2103,1.27,4.76,100.7,88.6,189.3,False
-nbl,2027-01-10,South East Melbourne Phoenix,New Zealand Breakers,0.7305,0.2695,1.37,3.71,109.6,100.4,210.1,False
-nbl,2027-01-13,Melbourne United,Cairns Taipans,0.7223,0.2777,1.38,3.6,92.9,84.0,176.9,False
-nbl,2027-01-14,Sydney Kings,South East Melbourne Phoenix,0.6974,0.3026,1.43,3.3,109.8,102.0,211.8,False
-nbl,2027-01-15,Perth Wildcats,New Zealand Breakers,0.7168,0.2832,1.4,3.53,95.1,86.5,181.6,False
-nbl,2027-01-16,Tasmania JackJumpers,Adelaide 36ers,0.477,0.523,2.1,1.91,81.4,82.3,163.7,False
-nbl,2027-01-17,Brisbane Bullets,Illawarra Hawks,0.2747,0.7253,3.64,1.38,91.6,100.6,192.2,False
-nbl,2027-01-20,Illawarra Hawks,New Zealand Breakers,0.6322,0.3678,1.58,2.72,104.6,99.6,204.2,False
-nbl,2027-01-20,Melbourne United,Tasmania JackJumpers,0.5578,0.4422,1.79,2.26,84.4,82.3,166.7,False
-nbl,2027-01-21,South East Melbourne Phoenix,Adelaide 36ers,0.6023,0.3977,1.66,2.51,100.4,96.5,196.8,False
-nbl,2027-01-22,Tasmania JackJumpers,Cairns Taipans,0.7112,0.2888,1.41,3.46,86.8,78.5,165.3,False
-nbl,2027-01-22,Perth Wildcats,Sydney Kings,0.3907,0.6093,2.56,1.64,89.6,93.8,183.4,False
-nbl,2027-01-23,Brisbane Bullets,Melbourne United,0.2882,0.7118,3.47,1.4,83.8,92.2,176.0,False
-nbl,2027-01-23,Adelaide 36ers,Illawarra Hawks,0.6057,0.3943,1.65,2.54,97.6,93.6,191.2,False
-nbl,2027-01-24,New Zealand Breakers,Cairns Taipans,0.6619,0.3381,1.51,2.96,95.9,89.7,185.6,False
-nbl,2027-01-24,South East Melbourne Phoenix,Perth Wildcats,0.5605,0.4395,1.78,2.28,98.4,96.1,194.5,False
-nbl,2027-01-25,Sydney Kings,Brisbane Bullets,0.925,0.075,1.08,13.34,104.1,82.5,186.6,False
-nbl,2027-01-27,Cairns Taipans,Sydney Kings,0.157,0.843,6.37,1.19,86.1,101.2,187.3,False
-nbl,2027-01-27,Tasmania JackJumpers,Illawarra Hawks,0.5314,0.4686,1.88,2.13,91.7,90.5,182.2,False
-nbl,2027-01-28,Brisbane Bullets,South East Melbourne Phoenix,0.1905,0.8095,5.25,1.24,92.4,105.5,198.0,False
-nbl,2027-01-28,Perth Wildcats,Adelaide 36ers,0.5917,0.4083,1.69,2.45,86.6,83.1,169.8,False
-nbl,2027-01-29,New Zealand Breakers,Melbourne United,0.4794,0.5206,2.09,1.92,93.4,94.1,187.5,False
-nbl,2027-01-30,Adelaide 36ers,Sydney Kings,0.351,0.649,2.85,1.54,89.9,95.7,185.6,False
-nbl,2027-01-30,Illawarra Hawks,Perth Wildcats,0.4511,0.5489,2.22,1.82,93.5,95.4,188.9,False
-nbl,2027-01-31,Tasmania JackJumpers,Brisbane Bullets,0.7776,0.2224,1.29,4.5,87.9,76.4,164.3,False
-nbl,2027-01-31,Cairns Taipans,South East Melbourne Phoenix,0.2565,0.7435,3.9,1.35,94.4,104.2,198.6,False
-nbl,2027-02-04,Illawarra Hawks,Brisbane Bullets,0.8,0.2,1.25,5.0,102.4,89.8,192.2,False
-nbl,2027-02-04,New Zealand Breakers,South East Melbourne Phoenix,0.358,0.642,2.79,1.56,102.3,107.8,210.1,False
-nbl,2027-02-05,Perth Wildcats,Cairns Taipans,0.8,0.2,1.25,5.0,92.0,79.4,171.4,False
-nbl,2027-02-05,Tasmania JackJumpers,Melbourne United,0.5422,0.4578,1.84,2.18,84.2,82.6,166.7,False
-nbl,2027-02-06,Brisbane Bullets,Adelaide 36ers,0.238,0.762,4.2,1.31,81.0,91.7,172.7,False
-nbl,2027-02-06,South East Melbourne Phoenix,Sydney Kings,0.3956,0.6044,2.53,1.65,103.9,107.9,211.8,False
-nbl,2027-02-07,Melbourne United,Perth Wildcats,0.4406,0.5594,2.27,1.79,85.3,87.6,172.9,False
-nbl,2027-02-07,New Zealand Breakers,Tasmania JackJumpers,0.4877,0.5123,2.05,1.95,87.4,87.8,175.2,False
-nbl,2027-02-10,Tasmania JackJumpers,Perth Wildcats,0.4347,0.5653,2.3,1.77,79.5,82.0,161.5,False
-nbl,2027-02-11,New Zealand Breakers,Sydney Kings,0.2308,0.7692,4.33,1.3,93.6,104.6,198.2,False
-nbl,2027-02-11,Melbourne United,South East Melbourne Phoenix,0.4272,0.5728,2.34,1.75,99.0,101.8,200.8,False
-nbl,2027-02-12,Perth Wildcats,Brisbane Bullets,0.8524,0.1476,1.17,6.78,93.1,77.4,170.4,False
-nbl,2027-02-12,Cairns Taipans,Adelaide 36ers,0.3088,0.6912,3.24,1.45,83.1,90.5,173.6,False
-nbl,2027-02-13,Sydney Kings,Tasmania JackJumpers,0.7884,0.2116,1.27,4.73,94.5,82.5,176.9,False
-nbl,2027-02-13,Melbourne United,Illawarra Hawks,0.5389,0.4611,1.86,2.17,98.2,96.8,195.0,False
-nbl,2027-02-14,South East Melbourne Phoenix,Brisbane Bullets,0.8665,0.1335,1.15,7.49,107.3,90.7,198.0,False
-nbl,2027-02-14,Adelaide 36ers,New Zealand Breakers,0.6802,0.3198,1.47,3.13,95.5,88.4,183.9,False
-wnba,2026-07-21,Golden State Valkyries,Washington Mystics,0.7715,0.2285,1.3,4.38,77.8,67.6,145.4,False
-wnba,2026-07-21,Seattle Storm,Minnesota Lynx,0.2737,0.7263,3.65,1.38,80.6,88.9,169.5,False
-wnba,2026-07-21,Dallas Wings,New York Liberty,0.616,0.384,1.62,2.6,96.2,92.2,188.4,False
-wnba,2026-07-21,Toronto Tempo,Las Vegas Aces,0.3845,0.6155,2.6,1.62,77.6,81.7,159.3,False
-wnba,2026-07-22,Seattle Storm,Minnesota Lynx,0.2737,0.7263,3.65,1.38,80.6,88.9,169.5,False
-wnba,2026-07-22,New York Liberty,Chicago Sky,0.7113,0.2887,1.41,3.46,97.3,89.6,186.8,False
-wnba,2026-07-22,Washington Mystics,Las Vegas Aces,0.4137,0.5863,2.42,1.71,74.9,77.9,152.8,False
-wnba,2026-07-22,Los Angeles Sparks,Phoenix Mercury,0.5585,0.4415,1.79,2.26,86.9,84.9,171.9,False
-wnba,2026-07-23,Indiana Fever,Connecticut Sun,0.8007,0.1993,1.25,5.02,98.6,87.0,185.6,False
-wnba,2026-07-23,Portland Fire,Dallas Wings,0.4014,0.5986,2.49,1.67,92.5,95.9,188.4,False
+nbl,2026-11-14,Perth Wildcats,Illawarra Hawks,0.6478,0.3522,1.54,2.84,97.1,91.4,188.5,False
+nbl,2026-11-15,Sydney Kings,New Zealand Breakers,0.8241,0.1759,1.21,5.69,106.7,92.7,199.5,False
+nbl,2026-11-15,Brisbane Bullets,Tasmania JackJumpers,0.2996,0.7004,3.34,1.43,78.2,86.1,164.3,False
+nbl,2026-11-18,New Zealand Breakers,South East Melbourne Phoenix,0.3722,0.6278,2.69,1.59,103.2,108.1,211.3,False
+nbl,2026-11-19,Illawarra Hawks,Adelaide 36ers,0.5085,0.4915,1.97,2.03,95.9,95.6,191.6,False
+nbl,2026-11-20,Cairns Taipans,Perth Wildcats,0.2712,0.7288,3.69,1.37,80.9,90.1,171.0,False
+nbl,2026-11-21,Melbourne United,New Zealand Breakers,0.6052,0.3948,1.65,2.53,96.4,92.4,188.8,False
+nbl,2026-11-21,Tasmania JackJumpers,Illawarra Hawks,0.5309,0.4691,1.88,2.13,91.7,90.5,182.2,False
+nbl,2026-11-22,Brisbane Bullets,Sydney Kings,0.1116,0.8884,8.96,1.13,84.2,102.5,186.7,False
+nbl,2026-11-22,South East Melbourne Phoenix,Cairns Taipans,0.8123,0.1877,1.23,5.33,105.9,92.6,198.5,False
+nbl,2026-12-02,Adelaide 36ers,South East Melbourne Phoenix,0.4834,0.5166,2.07,1.94,98.3,98.9,197.1,False
+nbl,2026-12-03,Brisbane Bullets,Perth Wildcats,0.2052,0.7948,4.87,1.26,78.9,91.2,170.1,False
+nbl,2026-12-04,Illawarra Hawks,Sydney Kings,0.2958,0.7042,3.38,1.42,98.9,107.0,205.9,False
+nbl,2026-12-04,New Zealand Breakers,Melbourne United,0.4933,0.5067,2.03,1.97,94.3,94.5,188.8,False
+nbl,2026-12-05,Cairns Taipans,South East Melbourne Phoenix,0.258,0.742,3.88,1.35,94.4,104.1,198.5,False
+nbl,2026-12-05,Adelaide 36ers,Tasmania JackJumpers,0.6055,0.3945,1.65,2.53,84.0,80.0,164.0,False
+nbl,2026-12-06,Melbourne United,Brisbane Bullets,0.7877,0.2123,1.27,4.71,94.0,82.1,176.1,False
+nbl,2026-12-06,Sydney Kings,Perth Wildcats,0.6956,0.3044,1.44,3.28,95.3,87.7,183.0,False
+nbl,2026-12-09,Cairns Taipans,Adelaide 36ers,0.3221,0.6779,3.1,1.48,83.5,90.4,173.9,False
+nbl,2026-12-10,Illawarra Hawks,Tasmania JackJumpers,0.5682,0.4318,1.76,2.32,92.4,89.8,182.2,False
+nbl,2026-12-11,New Zealand Breakers,Sydney Kings,0.2429,0.7571,4.12,1.32,94.5,105.0,199.5,False
+nbl,2026-12-12,Cairns Taipans,Brisbane Bullets,0.6311,0.3689,1.58,2.71,89.7,84.7,174.4,False
+nbl,2026-12-12,Melbourne United,Tasmania JackJumpers,0.5566,0.4434,1.8,2.26,84.4,82.3,166.8,False
+nbl,2026-12-13,Adelaide 36ers,Sydney Kings,0.3391,0.6609,2.95,1.51,89.9,96.1,186.0,False
+nbl,2026-12-13,South East Melbourne Phoenix,Perth Wildcats,0.5559,0.4441,1.8,2.25,98.1,96.0,194.0,False
+nbl,2026-12-16,Perth Wildcats,Melbourne United,0.6573,0.3427,1.52,2.92,89.4,83.3,172.6,False
+nbl,2026-12-17,Sydney Kings,Cairns Taipans,0.889,0.111,1.12,9.01,102.8,84.5,187.2,False
+nbl,2026-12-18,New Zealand Breakers,Tasmania JackJumpers,0.5008,0.4992,2.0,2.0,88.2,88.2,176.4,False
+nbl,2026-12-19,Adelaide 36ers,Brisbane Bullets,0.819,0.181,1.22,5.52,93.4,79.8,173.2,False
+nbl,2026-12-19,South East Melbourne Phoenix,Sydney Kings,0.3961,0.6039,2.52,1.66,103.9,107.8,211.7,False
+nbl,2026-12-20,Cairns Taipans,Perth Wildcats,0.2712,0.7288,3.69,1.37,80.9,90.1,171.0,False
+nbl,2026-12-20,Illawarra Hawks,Melbourne United,0.5625,0.4375,1.78,2.29,98.7,96.3,195.0,False
+nbl,2026-12-21,Tasmania JackJumpers,Adelaide 36ers,0.4912,0.5088,2.04,1.97,81.9,82.2,164.0,False
+nbl,2026-12-22,New Zealand Breakers,Brisbane Bullets,0.747,0.253,1.34,3.95,98.1,88.1,186.1,False
+nbl,2026-12-23,Melbourne United,Cairns Taipans,0.7205,0.2795,1.39,3.58,92.8,84.1,176.9,False
+nbl,2026-12-24,Adelaide 36ers,Perth Wildcats,0.4894,0.5106,2.04,1.96,84.7,85.1,169.8,False
+nbl,2026-12-25,Sydney Kings,Illawarra Hawks,0.7817,0.2183,1.28,4.58,108.8,97.1,205.9,False
+nbl,2026-12-26,Tasmania JackJumpers,South East Melbourne Phoenix,0.4242,0.5758,2.36,1.74,92.4,95.3,187.6,False
+nbl,2026-12-27,Illawarra Hawks,New Zealand Breakers,0.6179,0.3821,1.62,2.62,105.0,100.5,205.4,False
+nbl,2026-12-27,Brisbane Bullets,Cairns Taipans,0.4652,0.5348,2.15,1.87,86.5,87.8,174.4,False
+nbl,2026-12-29,Sydney Kings,Melbourne United,0.7875,0.2125,1.27,4.71,100.7,88.7,189.3,False
+nbl,2026-12-30,Brisbane Bullets,Adelaide 36ers,0.2488,0.7512,4.02,1.33,81.5,91.7,173.2,False
+nbl,2026-12-31,Cairns Taipans,New Zealand Breakers,0.4202,0.5798,2.38,1.72,91.9,94.9,186.7,False
+nbl,2026-12-31,Illawarra Hawks,South East Melbourne Phoenix,0.4386,0.5614,2.28,1.78,107.9,110.2,218.1,False
+nbl,2027-01-01,Tasmania JackJumpers,Perth Wildcats,0.4318,0.5682,2.32,1.76,79.3,81.8,161.1,False
+nbl,2027-01-02,Illawarra Hawks,Cairns Taipans,0.7329,0.2671,1.36,3.74,101.1,91.8,192.9,False
+nbl,2027-01-02,Adelaide 36ers,South East Melbourne Phoenix,0.4834,0.5166,2.07,1.94,98.3,98.9,197.1,False
+nbl,2027-01-03,Brisbane Bullets,Melbourne United,0.2879,0.7121,3.47,1.4,83.8,92.2,176.1,False
+nbl,2027-01-03,New Zealand Breakers,Perth Wildcats,0.3824,0.6176,2.61,1.62,89.0,93.5,182.5,False
+nbl,2027-01-04,Sydney Kings,Tasmania JackJumpers,0.7859,0.2141,1.27,4.67,94.4,82.5,176.9,False
+nbl,2027-01-06,South East Melbourne Phoenix,Tasmania JackJumpers,0.6693,0.3307,1.49,3.02,97.1,90.5,187.6,False
+nbl,2027-01-06,Illawarra Hawks,Perth Wildcats,0.4479,0.5521,2.23,1.81,93.3,95.2,188.5,False
+nbl,2027-01-07,Melbourne United,Adelaide 36ers,0.4973,0.5027,2.01,1.99,87.8,87.9,175.7,False
+nbl,2027-01-08,Brisbane Bullets,Sydney Kings,0.1116,0.8884,8.96,1.13,84.2,102.5,186.7,False
+nbl,2027-01-08,New Zealand Breakers,Illawarra Hawks,0.4807,0.5193,2.08,1.93,102.4,103.1,205.4,False
+nbl,2027-01-09,Cairns Taipans,Tasmania JackJumpers,0.3777,0.6223,2.65,1.61,80.3,84.9,165.2,False
+nbl,2027-01-09,Adelaide 36ers,Perth Wildcats,0.4894,0.5106,2.04,1.96,84.7,85.1,169.8,False
+nbl,2027-01-10,Sydney Kings,Melbourne United,0.7875,0.2125,1.27,4.71,100.7,88.7,189.3,False
+nbl,2027-01-10,South East Melbourne Phoenix,New Zealand Breakers,0.7168,0.2832,1.4,3.53,109.9,101.3,211.3,False
+nbl,2027-01-13,Melbourne United,Cairns Taipans,0.7205,0.2795,1.39,3.58,92.8,84.1,176.9,False
+nbl,2027-01-14,Sydney Kings,South East Melbourne Phoenix,0.6956,0.3044,1.44,3.29,109.7,102.0,211.7,False
+nbl,2027-01-15,Perth Wildcats,New Zealand Breakers,0.7065,0.2935,1.42,3.41,95.3,87.2,182.5,False
+nbl,2027-01-16,Tasmania JackJumpers,Adelaide 36ers,0.4912,0.5088,2.04,1.97,81.9,82.2,164.0,False
+nbl,2027-01-17,Brisbane Bullets,Illawarra Hawks,0.274,0.726,3.65,1.38,91.6,100.6,192.3,False
+nbl,2027-01-20,Illawarra Hawks,New Zealand Breakers,0.6179,0.3821,1.62,2.62,105.0,100.5,205.4,False
+nbl,2027-01-20,Melbourne United,Tasmania JackJumpers,0.5566,0.4434,1.8,2.26,84.4,82.3,166.8,False
+nbl,2027-01-21,South East Melbourne Phoenix,Adelaide 36ers,0.6147,0.3853,1.63,2.6,100.8,96.4,197.1,False
+nbl,2027-01-22,Tasmania JackJumpers,Cairns Taipans,0.7099,0.2901,1.41,3.45,86.7,78.4,165.2,False
+nbl,2027-01-22,Perth Wildcats,Sydney Kings,0.3949,0.6051,2.53,1.65,89.5,93.5,183.0,False
+nbl,2027-01-23,Brisbane Bullets,Melbourne United,0.2879,0.7121,3.47,1.4,83.8,92.2,176.1,False
+nbl,2027-01-23,Adelaide 36ers,Illawarra Hawks,0.5904,0.4096,1.69,2.44,97.5,94.1,191.6,False
+nbl,2027-01-24,New Zealand Breakers,Cairns Taipans,0.6729,0.3271,1.49,3.06,96.7,90.0,186.7,False
+nbl,2027-01-24,South East Melbourne Phoenix,Perth Wildcats,0.5559,0.4441,1.8,2.25,98.1,96.0,194.0,False
+nbl,2027-01-25,Sydney Kings,Brisbane Bullets,0.9239,0.0761,1.08,13.14,104.1,82.6,186.7,False
+nbl,2027-01-27,Cairns Taipans,Sydney Kings,0.1587,0.8413,6.3,1.19,86.1,101.1,187.2,False
+nbl,2027-01-27,Tasmania JackJumpers,Illawarra Hawks,0.5309,0.4691,1.88,2.13,91.7,90.5,182.2,False
+nbl,2027-01-28,Brisbane Bullets,South East Melbourne Phoenix,0.1909,0.8091,5.24,1.24,92.4,105.5,198.0,False
+nbl,2027-01-28,Perth Wildcats,Adelaide 36ers,0.6075,0.3925,1.65,2.55,86.9,82.8,169.8,False
+nbl,2027-01-29,New Zealand Breakers,Melbourne United,0.4933,0.5067,2.03,1.97,94.3,94.5,188.8,False
+nbl,2027-01-30,Adelaide 36ers,Sydney Kings,0.3391,0.6609,2.95,1.51,89.9,96.1,186.0,False
+nbl,2027-01-30,Illawarra Hawks,Perth Wildcats,0.4479,0.5521,2.23,1.81,93.3,95.2,188.5,False
+nbl,2027-01-31,Tasmania JackJumpers,Brisbane Bullets,0.7772,0.2228,1.29,4.49,87.9,76.4,164.3,False
+nbl,2027-01-31,Cairns Taipans,South East Melbourne Phoenix,0.258,0.742,3.88,1.35,94.4,104.1,198.5,False
+nbl,2027-02-04,Illawarra Hawks,Brisbane Bullets,0.7995,0.2005,1.25,4.99,102.4,89.8,192.3,False
+nbl,2027-02-04,New Zealand Breakers,South East Melbourne Phoenix,0.3722,0.6278,2.69,1.59,103.2,108.1,211.3,False
+nbl,2027-02-05,Perth Wildcats,Cairns Taipans,0.8004,0.1996,1.25,5.01,91.8,79.2,171.0,False
+nbl,2027-02-05,Tasmania JackJumpers,Melbourne United,0.542,0.458,1.84,2.18,84.2,82.6,166.8,False
+nbl,2027-02-06,Brisbane Bullets,Adelaide 36ers,0.2488,0.7512,4.02,1.33,81.5,91.7,173.2,False
+nbl,2027-02-06,South East Melbourne Phoenix,Sydney Kings,0.3961,0.6039,2.52,1.66,103.9,107.8,211.7,False
+nbl,2027-02-07,Melbourne United,Perth Wildcats,0.4371,0.5629,2.29,1.78,85.1,87.5,172.6,False
+nbl,2027-02-07,New Zealand Breakers,Tasmania JackJumpers,0.5008,0.4992,2.0,2.0,88.2,88.2,176.4,False
+nbl,2027-02-10,Tasmania JackJumpers,Perth Wildcats,0.4318,0.5682,2.32,1.76,79.3,81.8,161.1,False
+nbl,2027-02-11,New Zealand Breakers,Sydney Kings,0.2429,0.7571,4.12,1.32,94.5,105.0,199.5,False
+nbl,2027-02-11,Melbourne United,South East Melbourne Phoenix,0.4275,0.5725,2.34,1.75,99.0,101.7,200.8,False
+nbl,2027-02-12,Perth Wildcats,Brisbane Bullets,0.8533,0.1467,1.17,6.82,93.0,77.2,170.1,False
+nbl,2027-02-12,Cairns Taipans,Adelaide 36ers,0.3221,0.6779,3.1,1.48,83.5,90.4,173.9,False
+nbl,2027-02-13,Sydney Kings,Tasmania JackJumpers,0.7859,0.2141,1.27,4.67,94.4,82.5,176.9,False
+nbl,2027-02-13,Melbourne United,Illawarra Hawks,0.5378,0.4622,1.86,2.16,98.2,96.8,195.0,False
+nbl,2027-02-14,South East Melbourne Phoenix,Brisbane Bullets,0.8654,0.1346,1.16,7.43,107.3,90.7,198.0,False
+nbl,2027-02-14,Adelaide 36ers,New Zealand Breakers,0.6535,0.3465,1.53,2.89,95.7,89.8,185.5,False
+wnba,2026-07-22,Seattle Storm,Minnesota Lynx,0.2738,0.7262,3.65,1.38,81.5,89.8,171.2,False
+wnba,2026-07-22,New York Liberty,Chicago Sky,0.7166,0.2834,1.4,3.53,97.6,89.7,187.3,False
+wnba,2026-07-22,Washington Mystics,Las Vegas Aces,0.4193,0.5807,2.38,1.72,75.3,78.1,153.4,False
+wnba,2026-07-22,Los Angeles Sparks,Phoenix Mercury,0.5585,0.4415,1.79,2.26,86.8,84.8,171.6,False
+wnba,2026-07-23,Indiana Fever,Connecticut Sun,0.8008,0.1992,1.25,5.02,98.5,86.9,185.4,False
+wnba,2026-07-23,Portland Fire,Dallas Wings,0.4063,0.5937,2.46,1.68,92.8,96.0,188.8,False
