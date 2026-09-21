@@ -1,5 +1,7 @@
 # Basketball-Modelling
 
+> **Status, September 2026:** GitHub Actions are currently paused on this repo, so automated data refreshes and deploys are not running. The data and any live site reflect the last build.
+
 Predictive models for **NBA**, **NBL**, **WNBA** and the **NBA Summer League** — match win
 probabilities, the full betting market book (spreads, totals, team totals, quarters, halves, margins,
 double results) and player props (points, rebounds, assists, threes, combos, double/triple-doubles) —
